@@ -1,7 +1,7 @@
 import random
 from typing import List
 
-from detector.common_detector import CommonDetector
+from api.detector.common_detector import CommonDetector
 
 
 class DetectorPool:
