@@ -3,6 +3,7 @@ from queue import Queue, Empty
 from threading import Thread
 
 import cv2
+import dlib as dlib
 
 from detector.pool import DetectorPool
 
@@ -12,6 +13,8 @@ class CommonVideoProcessor(ABC):
         self.skip_frame_count = skip_frame_count
         self.frame_processor_count = frame_processor_count
         self.detector_pool = detector_pool
+
+        self.__trackers = []
 
         self.last_delete_frame = 0
         self.current_output_frame = 0
@@ -40,6 +43,8 @@ class CommonVideoProcessor(ABC):
         while True:
             frame_id, frame = self.__frame_processor_tasks[thread_id].get()
 
+            data = []
+
             bboxes, classes, scores = self.detector_pool.detect(frame, thread_id)
             for obj_bbox, obj_class, obj_score in zip(bboxes, classes, scores):
                 if obj_class != 0:
@@ -48,9 +53,11 @@ class CommonVideoProcessor(ABC):
                 if obj_score < 0.75:
                     continue
 
+                data.append(('person', obj_bbox))
+
                 cv2.rectangle(frame, (obj_bbox[0], obj_bbox[1]), (obj_bbox[2], obj_bbox[3]), (0, 0, 255))
 
-            self.__thread_suggestions[thread_id].put((frame_id, frame))
+            self.__thread_suggestions[thread_id].put((frame_id, frame, data))
 
     @abstractmethod
     def _abs__has_next_frame(self):
@@ -68,7 +75,7 @@ class CommonVideoProcessor(ABC):
                 self.__frame_processor_tasks[
                     (frame_id // self.skip_frame_count) % self.frame_processor_count].put((frame_id, frame))
             else:
-                self.__thread_suggestions[-1].put((frame_id, frame))
+                self.__thread_suggestions[-1].put((frame_id, frame, None))
             frame_id += 1
 
         self.max_frame_count = frame_id
@@ -89,9 +96,9 @@ class CommonVideoProcessor(ABC):
 
             for suggestion in self.__thread_suggestions:
                 try:
-                    frame_id, frame = suggestion.get_nowait()
+                    frame_id, frame, data = suggestion.get_nowait()
 
-                    self.__outputs[frame_id] = frame
+                    self.__outputs[frame_id] = (frame, data)
 
                     suggestion.task_done()
                 except Empty as e:
@@ -104,7 +111,35 @@ class CommonVideoProcessor(ABC):
         while self.current_output_frame not in self.__outputs:
             pass
 
-        frame = self.__outputs[self.current_output_frame]
+        frame, data = self.__outputs[self.current_output_frame]
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        if self.current_output_frame % self.skip_frame_count == 0:
+            self.__trackers = []
+
+            for obj_class, obj_bbox in data:
+                self.__trackers.append(dlib.correlation_tracker())
+                self.__trackers[-1].start_track(
+                    rgb_frame,
+                    dlib.rectangle(
+                        int(obj_bbox[0]),
+                        int(obj_bbox[1]),
+                        int(obj_bbox[2]),
+                        int(obj_bbox[3])
+                    )
+                )
+        else:
+            for tracker in self.__trackers:
+                tracker.update(rgb_frame)
+                tracker_position = tracker.get_position()
+
+                cv2.rectangle(
+                    frame,
+                    (int(tracker_position.left()), int(tracker_position.top())),
+                    (int(tracker_position.right()), int(tracker_position.bottom())),
+                    (255, 0, 0)
+                )
+
         self.current_output_frame += 1
 
         return frame
