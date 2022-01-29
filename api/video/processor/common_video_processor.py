@@ -4,15 +4,18 @@ from threading import Thread
 
 import cv2
 import dlib as dlib
+from PIL import Image
 
+from bbox_expander.bbox_expander import BboxExpander
 from detector.pool import DetectorPool
 
 
 class CommonVideoProcessor(ABC):
-    def __init__(self, skip_frame_count, frame_processor_count, detector_pool: DetectorPool):
+    def __init__(self, skip_frame_count, frame_processor_count, detector_pool: DetectorPool, bbox_expander: BboxExpander):
         self.skip_frame_count = skip_frame_count
         self.frame_processor_count = frame_processor_count
         self.detector_pool = detector_pool
+        self.bbox_expander = bbox_expander
 
         self.__trackers = []
 
@@ -30,34 +33,60 @@ class CommonVideoProcessor(ABC):
 
         self.__thread_suggestions = [Queue()] * (len(self.__frame_processors) + 1)
         self.__suggestion_collector_thread = Thread(target=self.__collect_suggests)
-        self.__suggestion_collector_thread.start()
 
         self.__frame_processor_tasks = [Queue()] * len(self.__frame_processors)
         self.__main_processor_thread = Thread(target=self.__process_video)
+
+    def process(self):
+        self._abs__process()
+
+        self.__suggestion_collector_thread.start()
         self.__main_processor_thread.start()
 
         for thread in self.__frame_processors:
             thread.start()
 
     def __process_frame(self, thread_id):
-        while True:
-            frame_id, frame = self.__frame_processor_tasks[thread_id].get()
+        while self.__frame_processor_tasks[thread_id].qsize() > 0 or self._abs__has_next_frame():
+            try:
+                frame_id, frame = self.__frame_processor_tasks[thread_id].get_nowait()
+                data = []
 
-            data = []
+                bboxes, classes, scores = self.detector_pool.detect(frame, thread_id)
 
-            bboxes, classes, scores = self.detector_pool.detect(frame, thread_id)
-            for obj_bbox, obj_class, obj_score in zip(bboxes, classes, scores):
-                if obj_class != 0:
-                    continue
+                for obj_bbox, obj_class, obj_score in zip(bboxes, classes, scores):
+                    if obj_class != 0:
+                        continue
 
-                if obj_score < 0.75:
-                    continue
+                    if obj_score < 0.75:
+                        continue
 
-                data.append(('person', obj_bbox))
+                    data.append(('person', obj_bbox))
 
-                cv2.rectangle(frame, (obj_bbox[0], obj_bbox[1]), (obj_bbox[2], obj_bbox[3]), (0, 0, 255))
+                    croped_frame = frame[int(obj_bbox[1]):int(obj_bbox[3]), int(obj_bbox[0]):int(obj_bbox[2])]
 
-            self.__thread_suggestions[thread_id].put((frame_id, frame, data))
+                    expand_bbox = self.bbox_expander.expand(
+                        Image.fromarray(cv2.cvtColor(croped_frame, cv2.COLOR_BGR2RGB)),
+                        obj_bbox
+                    )
+
+                    cv2.rectangle(
+                        frame,
+                        (int(expand_bbox[0]), int(expand_bbox[1])),
+                        (int(expand_bbox[2]), int(expand_bbox[3])),
+                        (0, 0, 255)
+                    )
+
+                self.__thread_suggestions[thread_id].put((frame_id, frame, data))
+
+                self.__frame_processor_tasks[thread_id].task_done()
+            except Exception as e:
+                print(e)
+                continue
+
+    @abstractmethod
+    def _abs__process(self):
+        pass
 
     @abstractmethod
     def _abs__has_next_frame(self):
@@ -70,46 +99,49 @@ class CommonVideoProcessor(ABC):
     def __process_video(self):
         frame_id = 0
         while self._abs__has_next_frame():
-            frame = self._abs__next_frame()
-            if frame_id % self.skip_frame_count == 0:
-                self.__frame_processor_tasks[
-                    (frame_id // self.skip_frame_count) % self.frame_processor_count].put((frame_id, frame))
-            else:
-                self.__thread_suggestions[-1].put((frame_id, frame, None))
-            frame_id += 1
+            try:
+                frame = self._abs__next_frame()
+                if frame_id % self.skip_frame_count == 0:
+                    self.__frame_processor_tasks[
+                        (frame_id // self.skip_frame_count) % self.frame_processor_count].put((frame_id, frame))
+                else:
+                    self.__thread_suggestions[-1].put((frame_id, frame, None))
+                frame_id += 1
+            except Empty:
+                continue
 
-        self.max_frame_count = frame_id
+        self.max_frame_count = frame_id - 1
         self.done_processing = True
 
-        for suggestion_queue in self.__thread_suggestions:
-            suggestion_queue.join()
-
-        for thread in self.__frame_processors:
-            thread.join()
-
     def __collect_suggests(self):
-        while True:
-            if self.current_output_frame - self.last_delete_frame >= 3 * self.skip_frame_count:
+        collect = True
+        while collect or self.has_next_frame():
+            collect = False
+
+            if self.current_output_frame - self.last_delete_frame > 3 * self.skip_frame_count:
                 for i in range(3 * self.skip_frame_count):
                     del self.__outputs[self.last_delete_frame]
                     self.last_delete_frame += 1
 
+            cnt = 0
             for suggestion in self.__thread_suggestions:
+                cnt += 1
                 try:
                     frame_id, frame, data = suggestion.get_nowait()
+                    collect = True
 
                     self.__outputs[frame_id] = (frame, data)
 
                     suggestion.task_done()
-                except Empty as e:
+                except Empty:
                     continue
 
     def has_next_frame(self):
-        return self.max_frame_count > self.current_output_frame
+        return self._abs__has_next_frame() or self.max_frame_count > self.current_output_frame
 
     def next_frame(self):
-        while self.current_output_frame not in self.__outputs:
-            pass
+        if self.current_output_frame not in self.__outputs:
+            raise Exception
 
         frame, data = self.__outputs[self.current_output_frame]
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -144,6 +176,21 @@ class CommonVideoProcessor(ABC):
 
         return frame
 
-    def close(self):
-        self.__suggestion_collector_thread.join()
+    @abstractmethod
+    def _abs__join(self):
+        pass
+
+    def join(self):
+        self._abs__join()
+
+        for thread in self.__frame_processors:
+            thread.join()
+
         self.__main_processor_thread.join()
+        self.__suggestion_collector_thread.join()
+
+        for suggestion in self.__thread_suggestions:
+            suggestion.join()
+
+        for task in self.__frame_processor_tasks:
+            task.join()

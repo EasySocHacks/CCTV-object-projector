@@ -19,9 +19,12 @@ class CommonVisualizer(ABC):
 
     def __collect_frames(self):
         while self.video_processor.has_next_frame():
-            self.time_frames.put((time.time_ns(), self.video_processor.next_frame()))
+            try:
+                self.time_frames.put((time.time_ns(), self.video_processor.next_frame()))
+            except Exception:
+                continue
 
-        self.video_processor.close()
+        self.video_processor.join()
 
     @abstractmethod
     def visualize(self):

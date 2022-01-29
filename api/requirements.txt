@@ -2,3 +2,4 @@ torchvision
 opencv-python
 opencv-contrib-python
 dlib
+Pillow
