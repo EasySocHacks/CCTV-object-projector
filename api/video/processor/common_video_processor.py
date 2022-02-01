@@ -52,7 +52,7 @@ class CommonVideoProcessor(ABC):
                 frame_id, frame = self.__frame_processor_tasks[thread_id].get_nowait()
                 data = []
 
-                bboxes, classes, scores = self.detector_pool.detect(frame, thread_id)
+                bboxes, classes, scores = self.detector_pool.detect(frame)
 
                 for obj_bbox, obj_class, obj_score in zip(bboxes, classes, scores):
                     if obj_class != 0:
@@ -101,7 +101,7 @@ class CommonVideoProcessor(ABC):
         while self._abs__has_next_frame():
             try:
                 frame = self._abs__next_frame()
-                if frame_id % self.skip_frame_count == 0:
+                if self.skip_frame_count == 0 or frame_id % self.skip_frame_count == 0:
                     self.__frame_processor_tasks[
                         (frame_id // self.skip_frame_count) % self.frame_processor_count].put((frame_id, frame))
                 else:
@@ -118,8 +118,8 @@ class CommonVideoProcessor(ABC):
         while collect or self.has_next_frame():
             collect = False
 
-            if self.current_output_frame - self.last_delete_frame > 3 * self.skip_frame_count:
-                for i in range(3 * self.skip_frame_count):
+            if self.current_output_frame - self.last_delete_frame > 3 * max(self.skip_frame_count, 50):
+                for i in range(3 * max(self.skip_frame_count, 50)):
                     del self.__outputs[self.last_delete_frame]
                     self.last_delete_frame += 1
 
@@ -146,7 +146,7 @@ class CommonVideoProcessor(ABC):
         frame, data = self.__outputs[self.current_output_frame]
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        if self.current_output_frame % self.skip_frame_count == 0:
+        if self.skip_frame_count == 0 or self.current_output_frame % self.skip_frame_count == 0:
             self.__trackers = []
 
             for obj_class, obj_bbox in data:
