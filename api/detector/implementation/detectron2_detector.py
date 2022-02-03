@@ -15,16 +15,16 @@ class Detectron2Detector(CommonDetector):
         detector_config.merge_from_file(model_zoo.get_config_file(model_name))
         detector_config.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
         detector_config.MODEL.WEIGHTS = model_weights
-        detector_config.MODEL.DEVICE = "cpu"
+        detector_config.MODEL.DEVICE = "cuda:0"
         self._predictor = DefaultPredictor(detector_config)
         self._predicted = {}
 
     def detect(self, image):
         output = self._predictor(image)
 
-        classes = output["instances"].pred_classes.numpy()
-        bboxes = output["instances"].pred_boxes.tensor.numpy()
-        scores = output["instances"].scores.numpy()
+        classes = output["instances"].pred_classes.cuda()
+        bboxes = output["instances"].pred_boxes.tensor.cuda()
+        scores = output["instances"].scores.cuda()
 
         return bboxes, classes, scores
 

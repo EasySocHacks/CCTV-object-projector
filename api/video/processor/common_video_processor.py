@@ -1,3 +1,4 @@
+import random
 from abc import ABC, abstractmethod
 from queue import Queue, Empty
 from threading import Thread
@@ -63,19 +64,28 @@ class CommonVideoProcessor(ABC):
 
                     data.append(('person', obj_bbox))
 
-                    croped_frame = frame[int(obj_bbox[1]):int(obj_bbox[3]), int(obj_bbox[0]):int(obj_bbox[2])]
+                    cv2.rectangle(frame,
+                                  (int(obj_bbox[0].item()), int(obj_bbox[1].item())),
+                                  (int(obj_bbox[2].item()), int(obj_bbox[3].item())),
+                                  (0, 0, 255)
+                                  )
 
-                    expand_bbox = self.bbox_expander.expand(
-                        Image.fromarray(cv2.cvtColor(croped_frame, cv2.COLOR_BGR2RGB)),
-                        obj_bbox
-                    )
-
-                    cv2.rectangle(
-                        frame,
-                        (int(expand_bbox[0]), int(expand_bbox[1])),
-                        (int(expand_bbox[2]), int(expand_bbox[3])),
-                        (0, 0, 255)
-                    )
+                    # croped_frame = frame[
+                    #                int(obj_bbox[1].item()):int(obj_bbox[3].item()),
+                    #                int(obj_bbox[0].item()):int(obj_bbox[2].item())
+                    #                ]
+                    #
+                    # expand_bbox = self.bbox_expander.expand(
+                    #     Image.fromarray(cv2.cvtColor(croped_frame, cv2.COLOR_BGR2RGB)),
+                    #     obj_bbox
+                    # )
+                    #
+                    # cv2.rectangle(
+                    #     frame,
+                    #     (int(expand_bbox[0]), int(expand_bbox[1])),
+                    #     (int(expand_bbox[2]), int(expand_bbox[3])),
+                    #     (0, 0, 255)
+                    # )
 
                 self.__thread_suggestions[thread_id].put((frame_id, frame, data))
 
@@ -102,8 +112,7 @@ class CommonVideoProcessor(ABC):
             try:
                 frame = self._abs__next_frame()
                 if self.skip_frame_count == 0 or frame_id % self.skip_frame_count == 0:
-                    self.__frame_processor_tasks[
-                        (frame_id // self.skip_frame_count) % self.frame_processor_count].put((frame_id, frame))
+                    self.__frame_processor_tasks[random.randint(0, self.frame_processor_count - 1)].put((frame_id, frame))
                 else:
                     self.__thread_suggestions[-1].put((frame_id, frame, None))
                 frame_id += 1
@@ -146,6 +155,8 @@ class CommonVideoProcessor(ABC):
         frame, data = self.__outputs[self.current_output_frame]
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
+        bbox = []
+
         if self.skip_frame_count == 0 or self.current_output_frame % self.skip_frame_count == 0:
             self.__trackers = []
 
@@ -160,19 +171,45 @@ class CommonVideoProcessor(ABC):
                         int(obj_bbox[3])
                     )
                 )
+
+                bbox = obj_bbox
         else:
             for tracker in self.__trackers:
                 tracker.update(rgb_frame)
                 tracker_position = tracker.get_position()
 
-                cv2.rectangle(
-                    frame,
-                    (int(tracker_position.left()), int(tracker_position.top())),
-                    (int(tracker_position.right()), int(tracker_position.bottom())),
-                    (255, 0, 0)
-                )
+                bbox = [
+                    tracker_position.left(),
+                    tracker_position.top(),
+                    tracker_position.right(),
+                    tracker_position.bottom()
+                ]
+
+                # cv2.rectangle(
+                #     frame,
+                #     (int(tracker_position.left()), int(tracker_position.top())),
+                #     (int(tracker_position.right()), int(tracker_position.bottom())),
+                #     (255, 0, 0)
+                # )
 
         self.current_output_frame += 1
+
+        croped_frame = frame[
+                       int(bbox[1]):int(bbox[3]),
+                       int(bbox[0]):int(bbox[2])
+                       ]
+
+        expand_bbox = self.bbox_expander.expand(
+            Image.fromarray(cv2.cvtColor(croped_frame, cv2.COLOR_BGR2RGB)),
+            bbox
+        )
+
+        cv2.rectangle(
+            frame,
+            (int(expand_bbox[0]), int(expand_bbox[1])),
+            (int(expand_bbox[2]), int(expand_bbox[3])),
+            (255, 0, 0)
+        )
 
         return frame
 
