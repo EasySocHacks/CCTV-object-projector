@@ -8,23 +8,25 @@ classes_names = ["person"]
 
 
 class Detectron2Detector(CommonDetector):
-    def __init__(self, model_name="COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml",
+    def __init__(self,
+                 device,
+                 model_name="COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml",
                  model_weights=model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml")):
-        super().__init__()
+        super().__init__(device)
         detector_config = get_cfg()
         detector_config.merge_from_file(model_zoo.get_config_file(model_name))
         detector_config.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
         detector_config.MODEL.WEIGHTS = model_weights
-        detector_config.MODEL.DEVICE = "cuda:0"
+        detector_config.MODEL.DEVICE = device
         self._predictor = DefaultPredictor(detector_config)
         self._predicted = {}
 
     def detect(self, image):
         output = self._predictor(image)
 
-        classes = output["instances"].pred_classes.cuda()
-        bboxes = output["instances"].pred_boxes.tensor.cuda()
-        scores = output["instances"].scores.cuda()
+        classes = output["instances"].pred_classes.to(self.device)
+        bboxes = output["instances"].pred_boxes.tensor.to(self.device)
+        scores = output["instances"].scores.to(self.device)
 
         return bboxes, classes, scores
 
