@@ -13,10 +13,11 @@ class WriteToFileVisualizer(CommonVisualizer):
 
         self.video_saving_folder = video_saving_folder
 
+    # TODO: use capture params
     def visualize(self):
         video_writer = cv2.VideoWriter(
             os.path.join(self.video_saving_folder, "{}.mp4".format(self.window_name)),
-            cv2.VideoWriter_fourcc('m', 'p', '4', 'v'),
+            cv2.VideoWriter_fourcc("m", "p", "4", "v"),
             30.0,
             (1920, 1080)
         )

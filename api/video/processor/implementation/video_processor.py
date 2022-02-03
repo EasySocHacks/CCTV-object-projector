@@ -3,7 +3,7 @@ from threading import Thread
 
 import cv2
 
-from bbox_expander.bbox_expander import BboxExpander
+from bbox_expander.pool.bbox_expander_pool import BboxExpanderPool
 from detector.pool.detector_pool import DetectorPool
 from video.processor.common_video_processor import CommonVideoProcessor
 
@@ -11,10 +11,10 @@ from video.processor.common_video_processor import CommonVideoProcessor
 class VideoProcessor(CommonVideoProcessor):
     def __init__(self,
                  video_path,
-                 skip_frame_count,
-                 frame_processor_count,
+                 batch_frame_size,
+                 max_future_frame_count,
                  detector_pool: DetectorPool,
-                 bbox_expander: BboxExpander):
+                 bbox_expander_pool: BboxExpanderPool):
         self.video_path = video_path
         self.__video_capture = cv2.VideoCapture(self.video_path)
 
@@ -23,7 +23,7 @@ class VideoProcessor(CommonVideoProcessor):
 
         self.collecting = True
 
-        super().__init__(skip_frame_count, frame_processor_count, detector_pool, bbox_expander)
+        super().__init__(batch_frame_size, max_future_frame_count, detector_pool, bbox_expander_pool)
 
     def _abs__process(self):
         self.__collecting_frames_thread.start()

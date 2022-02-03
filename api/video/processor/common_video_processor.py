@@ -1,6 +1,8 @@
-import random
+import copy
 from abc import ABC, abstractmethod
-from queue import Queue, Empty
+from concurrent.futures import ThreadPoolExecutor
+from logging import getLogger
+from queue import Empty
 from threading import Thread
 
 import cv2
@@ -8,91 +10,135 @@ import dlib as dlib
 from PIL import Image
 
 from bbox_expander.bbox_expander import BboxExpander
+from bbox_expander.pool.bbox_expander_pool import BboxExpanderPool
 from detector.pool import DetectorPool
 
 
 class CommonVideoProcessor(ABC):
-    def __init__(self, skip_frame_count, frame_processor_count, detector_pool: DetectorPool, bbox_expander: BboxExpander):
-        self.skip_frame_count = skip_frame_count
-        self.frame_processor_count = frame_processor_count
+    def __init__(self,
+                 batch_frame_size,
+                 max_future_frame_count,
+                 detector_pool: DetectorPool,
+                 bbox_expander_pool: BboxExpanderPool):
+        if batch_frame_size > max_future_frame_count:
+            raise Exception
+
+        self.batch_frame_size = batch_frame_size
+        self.max_future_frame_count = max_future_frame_count
         self.detector_pool = detector_pool
-        self.bbox_expander = bbox_expander
+        self.bbox_expander_pool = bbox_expander_pool
 
-        self.__trackers = []
+        self.thread_pool = ThreadPoolExecutor(max_workers=int(max_future_frame_count / batch_frame_size))
 
-        self.last_delete_frame = 0
-        self.current_output_frame = 0
-        self.max_frame_count = float('inf')
+        self.future_frames = [-1] * self.max_future_frame_count
+        for index, _ in enumerate(self.future_frames):
+            self.future_frames[index] = index
+
         self.done_processing = False
 
-        self.__frame_processors = []
-        for i in range(frame_processor_count):
-            thread = Thread(target=self.__process_frame, args=(i,))
-            self.__frame_processors.append(thread)
+        self.current_output_frame = 0
+        self.max_frame_count = float('inf')
 
-        self.__outputs = {}
-
-        self.__thread_suggestions = [Queue()] * (len(self.__frame_processors) + 1)
-        self.__suggestion_collector_thread = Thread(target=self.__collect_suggests)
-
-        self.__frame_processor_tasks = [Queue()] * len(self.__frame_processors)
         self.__main_processor_thread = Thread(target=self.__process_video)
+
+        self.logger = getLogger()
 
     def process(self):
         self._abs__process()
 
-        self.__suggestion_collector_thread.start()
         self.__main_processor_thread.start()
 
-        for thread in self.__frame_processors:
-            thread.start()
+    def __process_frame_batch(self, batch):
+        self.logger.info("Start process frame batch [{}-{}]"
+                         .format(batch[0][0], batch[0][0] + self.batch_frame_size - 1))
 
-    def __process_frame(self, thread_id):
-        while self.__frame_processor_tasks[thread_id].qsize() > 0 or self._abs__has_next_frame():
-            try:
-                frame_id, frame = self.__frame_processor_tasks[thread_id].get_nowait()
-                data = []
+        trackers = []
+        expands = []
 
+        for index, (frame_id, frame) in enumerate(batch):
+            self.logger.info("Start process frame {}".format(frame_id))
+
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            if index == 0:
                 bboxes, classes, scores = self.detector_pool.detect(frame)
 
                 for obj_bbox, obj_class, obj_score in zip(bboxes, classes, scores):
                     if obj_class != 0:
                         continue
 
-                    if obj_score < 0.75:
+                    if obj_score < 0.6:
                         continue
 
-                    data.append(('person', obj_bbox))
+                    trackers.append(dlib.correlation_tracker())
+                    trackers[-1].start_track(
+                        rgb_frame,
+                        dlib.rectangle(
+                            int(obj_bbox[0]),
+                            int(obj_bbox[1]),
+                            int(obj_bbox[2]),
+                            int(obj_bbox[3])
+                        )
+                    )
 
-                    cv2.rectangle(frame,
-                                  (int(obj_bbox[0].item()), int(obj_bbox[1].item())),
-                                  (int(obj_bbox[2].item()), int(obj_bbox[3].item())),
-                                  (0, 0, 255)
-                                  )
+                    cv2.rectangle(
+                        frame,
+                        (int(obj_bbox[0]), int(obj_bbox[1])),
+                        (int(obj_bbox[2]), int(obj_bbox[3])),
+                        (0, 0, 255)
+                    )
 
-                    # croped_frame = frame[
-                    #                int(obj_bbox[1].item()):int(obj_bbox[3].item()),
-                    #                int(obj_bbox[0].item()):int(obj_bbox[2].item())
-                    #                ]
-                    #
-                    # expand_bbox = self.bbox_expander.expand(
-                    #     Image.fromarray(cv2.cvtColor(croped_frame, cv2.COLOR_BGR2RGB)),
-                    #     obj_bbox
-                    # )
-                    #
-                    # cv2.rectangle(
-                    #     frame,
-                    #     (int(expand_bbox[0]), int(expand_bbox[1])),
-                    #     (int(expand_bbox[2]), int(expand_bbox[3])),
-                    #     (0, 0, 255)
-                    # )
+                    croped_image = rgb_frame[
+                                   int(obj_bbox[1]):int(obj_bbox[3]),
+                                   int(obj_bbox[0]):int(obj_bbox[2])
+                                   ]
 
-                self.__thread_suggestions[thread_id].put((frame_id, frame, data))
+                    expand = self.bbox_expander_pool.expand(Image.fromarray(croped_image))
+                    expand_bbox = BboxExpander.apply_expand(obj_bbox, expand)
 
-                self.__frame_processor_tasks[thread_id].task_done()
-            except Exception as e:
-                print(e)
+                    cv2.rectangle(
+                        frame,
+                        (int(expand_bbox[0]), int(expand_bbox[1])),
+                        (int(expand_bbox[2]), int(expand_bbox[3])),
+                        (255, 0, 0)
+                    )
+
+                    expands.append(expand)
+
+            else:
+                for tracker, expand in zip(trackers, expands):
+                    tracker.update(rgb_frame)
+                    tracker_position = tracker.get_position()
+
+                    bbox = [
+                        tracker_position.left(),
+                        tracker_position.top(),
+                        tracker_position.right(),
+                        tracker_position.bottom()
+                    ]
+
+                    expand_bbox = BboxExpander.apply_expand(bbox, expand)
+
+                    cv2.rectangle(
+                        frame,
+                        (int(expand_bbox[0]), int(expand_bbox[1])),
+                        (int(expand_bbox[2]), int(expand_bbox[3])),
+                        (255, 0, 0)
+                    )
+
+        self.logger.info("End process frame batch [{}-{}]".format(batch[0][0], batch[0][0] + self.batch_frame_size - 1))
+
+        for frame_id, frame in batch:
+            while self.future_frames[frame_id % self.max_future_frame_count] != frame_id:
                 continue
+
+            self.logger.info("Push frame {} onto {} with value {}".format(
+                frame_id,
+                frame_id % self.max_future_frame_count,
+                self.future_frames[frame_id % self.max_future_frame_count]
+            ))
+
+            self.future_frames[frame_id % self.max_future_frame_count] = frame
 
     @abstractmethod
     def _abs__process(self):
@@ -107,109 +153,44 @@ class CommonVideoProcessor(ABC):
         pass
 
     def __process_video(self):
+        self.logger.info("Start process video")
+
         frame_id = 0
+        batch = []
         while self._abs__has_next_frame():
             try:
                 frame = self._abs__next_frame()
-                if self.skip_frame_count == 0 or frame_id % self.skip_frame_count == 0:
-                    self.__frame_processor_tasks[random.randint(0, self.frame_processor_count - 1)].put((frame_id, frame))
-                else:
-                    self.__thread_suggestions[-1].put((frame_id, frame, None))
+                batch.append((frame_id, frame))
+
+                if len(batch) == self.batch_frame_size or not self._abs__has_next_frame():
+                    self.thread_pool.submit(self.__process_frame_batch, copy.deepcopy(batch))
+                    batch = []
+
                 frame_id += 1
             except Empty:
                 continue
 
-        self.max_frame_count = frame_id - 1
         self.done_processing = True
+        self.max_frame_count = frame_id
 
-    def __collect_suggests(self):
-        collect = True
-        while collect or self.has_next_frame():
-            collect = False
+        self.logger.info("End process video. Processed {} frames".format(self.max_frame_count))
 
-            if self.current_output_frame - self.last_delete_frame > 3 * max(self.skip_frame_count, 50):
-                for i in range(3 * max(self.skip_frame_count, 50)):
-                    del self.__outputs[self.last_delete_frame]
-                    self.last_delete_frame += 1
-
-            cnt = 0
-            for suggestion in self.__thread_suggestions:
-                cnt += 1
-                try:
-                    frame_id, frame, data = suggestion.get_nowait()
-                    collect = True
-
-                    self.__outputs[frame_id] = (frame, data)
-
-                    suggestion.task_done()
-                except Empty:
-                    continue
-
+    # TODO: synchronize
     def has_next_frame(self):
-        return self._abs__has_next_frame() or self.max_frame_count > self.current_output_frame
+        return self.max_frame_count > self.current_output_frame
 
+    # TODO: has next/next available
     def next_frame(self):
-        if self.current_output_frame not in self.__outputs:
-            raise Exception
+        while isinstance(self.future_frames[self.current_output_frame % self.max_future_frame_count], int):
+            continue
 
-        frame, data = self.__outputs[self.current_output_frame]
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        self.logger.info("Grab processed frame with id {}".format(self.current_output_frame))
 
-        bbox = []
-
-        if self.skip_frame_count == 0 or self.current_output_frame % self.skip_frame_count == 0:
-            self.__trackers = []
-
-            for obj_class, obj_bbox in data:
-                self.__trackers.append(dlib.correlation_tracker())
-                self.__trackers[-1].start_track(
-                    rgb_frame,
-                    dlib.rectangle(
-                        int(obj_bbox[0]),
-                        int(obj_bbox[1]),
-                        int(obj_bbox[2]),
-                        int(obj_bbox[3])
-                    )
-                )
-
-                bbox = obj_bbox
-        else:
-            for tracker in self.__trackers:
-                tracker.update(rgb_frame)
-                tracker_position = tracker.get_position()
-
-                bbox = [
-                    tracker_position.left(),
-                    tracker_position.top(),
-                    tracker_position.right(),
-                    tracker_position.bottom()
-                ]
-
-                # cv2.rectangle(
-                #     frame,
-                #     (int(tracker_position.left()), int(tracker_position.top())),
-                #     (int(tracker_position.right()), int(tracker_position.bottom())),
-                #     (255, 0, 0)
-                # )
+        frame = self.future_frames[self.current_output_frame % self.max_future_frame_count]
+        self.future_frames[self.current_output_frame % self.max_future_frame_count] = \
+            self.current_output_frame + self.max_future_frame_count
 
         self.current_output_frame += 1
-
-        croped_frame = frame[
-                       int(bbox[1]):int(bbox[3]),
-                       int(bbox[0]):int(bbox[2])
-                       ]
-
-        expand_bbox = self.bbox_expander.expand(
-            Image.fromarray(cv2.cvtColor(croped_frame, cv2.COLOR_BGR2RGB)),
-            bbox
-        )
-
-        cv2.rectangle(
-            frame,
-            (int(expand_bbox[0]), int(expand_bbox[1])),
-            (int(expand_bbox[2]), int(expand_bbox[3])),
-            (255, 0, 0)
-        )
 
         return frame
 
@@ -220,14 +201,4 @@ class CommonVideoProcessor(ABC):
     def join(self):
         self._abs__join()
 
-        for thread in self.__frame_processors:
-            thread.join()
-
         self.__main_processor_thread.join()
-        self.__suggestion_collector_thread.join()
-
-        for suggestion in self.__thread_suggestions:
-            suggestion.join()
-
-        for task in self.__frame_processor_tasks:
-            task.join()
