@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PostMapping
 
 @Controller
-class Video {
+class VideoController {
     @GetMapping("", "video/list/preview")
     fun previewVideoList(model: Model): String {
         model.addAttribute("streamServices", videoFragmentStreamServices)
