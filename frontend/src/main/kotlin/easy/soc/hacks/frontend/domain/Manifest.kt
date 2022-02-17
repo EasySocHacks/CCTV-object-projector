@@ -11,4 +11,4 @@ open class ManifestNode(
     var next: ManifestNode? = null
 )
 
-object DummyManifestNode : ManifestNode(Manifest(-1, emptyList(), ByteArray(0)))
+class DummyManifestNode : ManifestNode(Manifest(-1, emptyList(), ByteArray(0)))

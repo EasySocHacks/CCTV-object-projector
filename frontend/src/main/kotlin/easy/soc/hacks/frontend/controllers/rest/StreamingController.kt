@@ -1,11 +1,10 @@
 package easy.soc.hacks.frontend.controllers.rest
 
-import easy.soc.hacks.frontend.domain.CameraVideo
+import easy.soc.hacks.frontend.domain.DummyManifestNode
 import easy.soc.hacks.frontend.domain.ManifestNode
 import easy.soc.hacks.frontend.domain.VideoFragment
 import easy.soc.hacks.frontend.service.VideoFragmentStreamService
 import org.springframework.http.HttpStatus.NOT_FOUND
-import org.springframework.http.HttpStatus.NOT_MODIFIED
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import javax.servlet.http.HttpSession
@@ -15,29 +14,7 @@ import javax.servlet.http.HttpSession
 class StreamingController {
     companion object {
         // TODO: create storage. DB?
-        val videoFragmentStreamServices = mutableMapOf(
-            0L to VideoFragmentStreamService(
-                CameraVideo(
-                    0L,
-                    "yt0",
-                    "url0"
-                )
-            ),
-            1L to VideoFragmentStreamService(
-                CameraVideo(
-                    1L,
-                    "yt1",
-                    "url1"
-                )
-            ),
-            2L to VideoFragmentStreamService(
-                CameraVideo(
-                    2L,
-                    "yt2",
-                    "url2"
-                )
-            )
-        )
+        val videoFragmentStreamServices = mutableMapOf<Long, VideoFragmentStreamService>()
         private const val httpSessionManifestNodeAttributeNameFormat = "VIDEO_%d_MANIFEST_NODE"
     }
 
@@ -70,7 +47,12 @@ class StreamingController {
         }
 
         val previousManifestMode = httpSession.getAttribute(httpSessionManifestNodeAttributeName) as ManifestNode
-        val manifestNode = previousManifestMode.next ?: return ResponseEntity.status(NOT_MODIFIED).build()
+        val manifestNode = previousManifestMode.next
+            ?: return if (previousManifestMode !is DummyManifestNode) {
+                ResponseEntity.ok().body(previousManifestMode.manifest.data)
+            } else {
+                ResponseEntity.status(NOT_FOUND).build()
+            }
 
         httpSession.setAttribute(httpSessionManifestNodeAttributeName, manifestNode)
 

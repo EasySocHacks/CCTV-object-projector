@@ -55,8 +55,8 @@ class VideoFragmentStreamService(
 
     // TODO: Force kill old fragments/manifests
     private val videoFragmentConcurrentMap = ConcurrentHashMap<Long, VideoFragment>()
-    private var videoFragmentNodeTail: VideoFragmentNode = DummyVideoFragmentNode
-    private var manifestNodeTail: ManifestNode = DummyManifestNode
+    private var videoFragmentNodeTail: VideoFragmentNode = DummyVideoFragmentNode()
+    private var manifestNodeTail: ManifestNode = DummyManifestNode()
 
     fun pushVideoFragment(videoFragment: VideoFragment) {
         videoFragmentConcurrentMap[videoFragment.id] = videoFragment

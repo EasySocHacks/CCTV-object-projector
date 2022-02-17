@@ -11,4 +11,4 @@ open class VideoFragmentNode(
     var next: VideoFragmentNode? = null
 )
 
-object DummyVideoFragmentNode : VideoFragmentNode(VideoFragment(-1, 0.0, ByteArray(0)))
+class DummyVideoFragmentNode : VideoFragmentNode(VideoFragment(-1, 0.0, ByteArray(0)))
