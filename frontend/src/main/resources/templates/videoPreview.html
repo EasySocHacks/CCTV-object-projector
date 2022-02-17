@@ -1,0 +1,36 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="template (streamServices)">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <div class="videoPreviewBlock" th:each="streamService : ${streamServices}">
+        <p th:text="${streamService.value.video.name}">Video Stream ID</p>
+        <div class="videoBlock" th:include=":: videoBlock (${streamService.key})"></div>
+    </div>
+    <form action="/video/add" method="get">
+        <button id="addVideoButton" type="submit">+</button>
+    </form>
+    <script th:include=":: playVideoScript (${streamServices.keySet()})"></script>
+</div>
+
+<div th:fragment="videoBlock (videoId)">
+    <video th:id="'video' + ${videoId}" class="video" muted="muted" autoplay="autoplay"></video>
+</div>
+
+<script th:fragment="playVideoScript (videoIds)" th:inline="javascript">
+/*<![CDATA[*/
+    if (Hls.isSupported()) {
+        const videoIds = [[${videoIds}]];
+
+        for (let videoId in videoIds) {
+            console.log(videoId)
+            let video = document.getElementById('video' + videoId);
+            let hls = new Hls();
+
+            hls.attachMedia(video);
+            hls.loadSource("/api/v1/video/" + videoId + "/manifest");
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                video.play();
+            });
+        }
+    }
+/*]]>*/
+</script>

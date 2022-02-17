@@ -1,0 +1,12 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>CCTV Video Projector</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+    <link rel="stylesheet" href="/css/videoPreview.css">
+</head>
+<body>
+    <div id="videoPreview" th:include="videoPreview :: template (${streamServices})"></div>
+</body>
+</html>
