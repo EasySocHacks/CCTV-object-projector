@@ -16,7 +16,17 @@
 </div>
 
 <script th:fragment="playVideoScript (videoIds)" th:inline="javascript">
-/*<![CDATA[*/
+    /*<![CDATA[*/
+    const cfg = Hls.DefaultConfig
+
+    cfg["initialLiveManifestSize"] = 2
+    cfg["backBufferLength"] = 0
+    cfg["maxBufferHole"] = 0.0
+    cfg["maxMaxBufferLength"] = 300
+    cfg["maxMaxBufferLength"] = 180
+    cfg["liveSyncDurationCount"] = 0
+    cfg["liveDurationInfinity"] = true
+
     if (Hls.isSupported()) {
         const videoIds = [[${videoIds}]];
 
@@ -32,5 +42,5 @@
             });
         }
     }
-/*]]>*/
+    /*]]>*/
 </script>

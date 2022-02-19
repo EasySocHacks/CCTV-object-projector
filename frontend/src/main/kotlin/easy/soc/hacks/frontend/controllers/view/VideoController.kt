@@ -38,7 +38,7 @@ class VideoController {
 
             backendBrokerService.appendCameraVideo(activeBackendWebSocketSession!!, cameraVideo)
         } else {
-            // Error message notification
+            // TODO: Error message notification
         }
 
         return "redirect:/"

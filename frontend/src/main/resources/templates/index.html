@@ -4,9 +4,12 @@
     <title>CCTV Video Projector</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 
+    <link rel="stylesheet" href="/css/index.css">
     <link rel="stylesheet" href="/css/videoPreview.css">
+    <link rel="stylesheet" href="/css/mapPreview.css">
 </head>
-<body>
+<body id="preview">
     <div id="videoPreview" th:include="videoPreview :: template (${streamServices})"></div>
+    <div id="mapPreview" th:include="mapPreview :: template"></div>
 </body>
 </html>

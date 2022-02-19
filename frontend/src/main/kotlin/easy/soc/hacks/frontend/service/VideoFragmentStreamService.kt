@@ -31,7 +31,7 @@ class VideoFragmentStreamService(
                     videoFragmentNodeTail = videoFragmentNode
 
                     manifestVideoFragmentNodeDeque.add(videoFragmentNode)
-                    if (manifestVideoFragmentNodeDeque.size > 5) {
+                    if (manifestVideoFragmentNodeDeque.size > 2) {
                         manifestVideoFragmentNodeDeque.removeFirst()
 
                         val manifest = Manifest(
