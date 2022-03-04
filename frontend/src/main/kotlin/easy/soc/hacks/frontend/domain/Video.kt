@@ -1,21 +1,44 @@
 package easy.soc.hacks.frontend.domain
 
-import lombok.Generated
+import lombok.Data
+import javax.persistence.*
 
-abstract class Video(
-    @Generated
-    var id: Long?,
-    val name: String,
-)
+@Table
+@Entity
+@Data
+open class Video {
+    companion object {
+        @Transient
+        const val sequenceName = "VIDEO_SEQUENCE"
+    }
 
-class CameraVideo(
-    id: Long?,
-    name: String,
-    val url: String
-) : Video(id, name)
+    @Id
+    @Column(nullable = false)
+    var id: Long? = null
 
-class FileVideo(
-    id: Long?,
-    name: String,
-    val path: String
-) : Video(id, name)
+    @Column(nullable = false)
+    var name: String? = null
+
+    @Column
+    var calibration: Calibration? = null
+
+    @Column
+    @OneToMany
+    var calibrationPointList = mutableListOf<CalibrationPoint>()
+}
+
+@Table
+@Entity
+@Data
+class CameraVideo : Video() {
+    @Column(nullable = false)
+    var url: String? = null
+}
+
+@Table
+@Entity
+@Data
+class FileVideo : Video() {
+    @Column(nullable = false)
+    var path: String? = null
+}

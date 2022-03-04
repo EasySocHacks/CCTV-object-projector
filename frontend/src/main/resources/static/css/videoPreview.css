@@ -34,3 +34,23 @@
     margin: 100px 260px 170px;
     cursor:pointer;
 }
+
+.calibration-required-notice {
+    border: 1px solid #730d0f;
+    width: 100%;
+    border-radius: 5px;
+    background: #ff2125;
+    display: block;
+    text-decoration: none;
+    color: black;
+}
+
+video {
+    width: 100%;
+    height: 100%;
+}
+
+.draw-over-video-canvas {
+    border: 1px solid red;
+    position: absolute;
+}

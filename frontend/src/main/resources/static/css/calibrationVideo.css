@@ -1,0 +1,50 @@
+.calibration-block {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.draw-over-video-canvas {
+    width: calc(100% - 16px);
+}
+
+.screenPoint {
+    display: flex;
+    flex-direction: row;
+}
+
+.worldPoint {
+    display: flex;
+    flex-direction: row;
+}
+
+.points {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    align-content: space-between;
+    margin: 20px;
+}
+
+.pointsHeader {
+    display: flex;
+    align-content: space-between;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.pointsBody {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.pointsRow {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 20px;
+}
+

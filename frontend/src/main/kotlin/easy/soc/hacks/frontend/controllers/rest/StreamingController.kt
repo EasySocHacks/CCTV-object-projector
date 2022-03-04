@@ -1,22 +1,22 @@
 package easy.soc.hacks.frontend.controllers.rest
 
-import easy.soc.hacks.frontend.domain.DummyManifestNode
-import easy.soc.hacks.frontend.domain.ManifestNode
 import easy.soc.hacks.frontend.domain.VideoFragment
-import easy.soc.hacks.frontend.service.VideoFragmentStreamService
+import easy.soc.hacks.frontend.service.VideoFragmentService
+import easy.soc.hacks.frontend.service.VideoService
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import javax.servlet.http.HttpSession
 
 @RestController
 @RequestMapping("api/v1")
 class StreamingController {
-    companion object {
-        // TODO: create storage. DB?
-        val videoFragmentStreamServices = mutableMapOf<Long, VideoFragmentStreamService>()
-        private const val httpSessionManifestNodeAttributeNameFormat = "VIDEO_%d_MANIFEST_NODE"
-    }
+    @Autowired
+    private lateinit var videoService: VideoService
+
+    @Autowired
+    private lateinit var videoFragmentService: VideoFragmentService
 
     @PostMapping("video/{videoId}/fragment/{fragmentId}")
     fun pushFragment(
@@ -25,55 +25,51 @@ class StreamingController {
         @RequestHeader("X-Fragment-duration") fragmentDuration: Double,
         @RequestBody data: ByteArray
     ): ResponseEntity<Unit> {
-        val videoFragment = VideoFragment(fragmentId, fragmentDuration, data)
-        videoFragmentStreamServices[videoId]?.pushVideoFragment(videoFragment)
-            ?: return ResponseEntity.status(NOT_FOUND).build()
+        return try {
+            val videoFragment = VideoFragment().apply {
+                this.id = fragmentId
+                this.duration = fragmentDuration
+                this.data = data
+                this.video = videoService.getVideoById(videoId).get()
+            }
+            videoFragmentService.save(videoFragment)
 
-        return ResponseEntity.ok().build()
+            ResponseEntity.ok().build()
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(NOT_FOUND).build()
+        } catch (e: Exception) {
+            ResponseEntity.status(INTERNAL_SERVER_ERROR).build()
+        }
     }
 
     @GetMapping("video/{videoId}/manifest")
     fun getManifest(
-        @PathVariable("videoId") videoId: Long,
-        httpSession: HttpSession
+        @PathVariable("videoId") videoId: Long
     ): ResponseEntity<ByteArray> {
-        val httpSessionManifestNodeAttributeName = httpSessionManifestNodeAttributeNameFormat.format(videoId)
-
-        if (httpSession.getAttribute(httpSessionManifestNodeAttributeName) == null) {
-            val manifestNodeTail = videoFragmentStreamServices[videoId]?.tailManifestNode()
-                ?: return ResponseEntity.status(NOT_FOUND).build()
-
-            httpSession.setAttribute(httpSessionManifestNodeAttributeName, manifestNodeTail)
+        return try {
+            ResponseEntity.ok().body(
+                videoFragmentService.getLatestManifest(videoService.getVideoById(videoId).get())
+            )
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(NOT_FOUND).build()
+        } catch (e: Exception) {
+            ResponseEntity.status(INTERNAL_SERVER_ERROR).build()
         }
-
-        val previousManifestMode = httpSession.getAttribute(httpSessionManifestNodeAttributeName) as ManifestNode
-        val manifestNode = previousManifestMode.next
-            ?: return if (previousManifestMode !is DummyManifestNode) {
-                ResponseEntity.ok().body(previousManifestMode.manifest.data)
-            } else {
-                ResponseEntity.status(NOT_FOUND).build()
-            }
-
-        httpSession.setAttribute(httpSessionManifestNodeAttributeName, manifestNode)
-
-        return ResponseEntity.ok().body(manifestNode.manifest.data)
     }
 
     @GetMapping("video/{videoId}/fragment/{fragmentId}")
     fun getFragment(
         @PathVariable("videoId") videoId: Long,
-        @PathVariable("fragmentId") fragmentId: Long,
-        httpSession: HttpSession
+        @PathVariable("fragmentId") fragmentId: Long
     ): ResponseEntity<ByteArray> {
-        val httpSessionManifestNodeAttributeName = httpSessionManifestNodeAttributeNameFormat.format(videoId)
-
-        val manifestNode = httpSession.getAttribute(httpSessionManifestNodeAttributeName) as ManifestNode?
-            ?: return ResponseEntity.status(NOT_FOUND).build()
-
-        val videoFragmentNode = manifestNode.manifest.videoFragmentNodes.find {
-            it.videoFragment.id == fragmentId
-        } ?: return ResponseEntity.status(NOT_FOUND).build()
-
-        return ResponseEntity.ok().body(videoFragmentNode.videoFragment.data)
+        return try {
+            ResponseEntity.ok().body(
+                videoFragmentService.getVideoFragment(videoService.getVideoById(videoId).get(), fragmentId).get().data
+            )
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(NOT_FOUND).build()
+        } catch (e: Exception) {
+            ResponseEntity.status(INTERNAL_SERVER_ERROR).build()
+        }
     }
 }
