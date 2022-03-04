@@ -1,0 +1,46 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>CCTV Video Projector</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+
+    <link rel="stylesheet" href="/css/videoPreview.css">
+    <link rel="stylesheet" href="/css/calibrationVideo.css">
+</head>
+<body>
+<!--    <div class="calibration-block" th:include="videoPreview :: drawableVideoBlock (${videoId})"></div>-->
+<!--    <div th:include="videoPreview :: playVideoScript (${ { videoId } })"></div>-->
+    <form th:action="'video/' + ${video.id} + 'calibration/save'" method="post">
+        <div class="points">
+            <div class="pointsHeader">
+                <div th:text="#{video.calibration.screen}"></div>
+                <div th:text="#{video.calibration.real}"></div>
+            </div>
+
+            <div class="pointsBody">
+                <div class="pointsRow">
+                    <div id="screenPoint0" class="screenPoint">
+                        <div>(</div>
+                        <input type="text" name="xScreen">
+                        <div>;</div>
+                        <input type="text" name="yScreen">
+                        <div>)</div>
+                    </div>
+
+                    <div id="worldPoint0" class="worldPoint">
+                        <div>(</div>
+                        <input type="text" name="xWorld">
+                        <div>;</div>
+                        <input type="text" name="yWorld">
+                        <div>;</div>
+                        <input type="text" name="zWorld">
+                        <div>)</div>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+        <button type="submit" th:text="#{video.calibration.save}"></button>
+    </form>
+</body>
+</html>
