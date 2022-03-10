@@ -29,8 +29,8 @@ class MainLoop:
         for video in video_list:
             self.__frame_collector_list__.append(FrameCollector(video))
             self.__video_processor_list__.append(VideoProcessor(
-                self.__processor_linker__,
                 video,
+                self.__processor_linker__,
                 self.__detector__,
                 self.__expander__,
                 detect_frame_batch_size
@@ -56,6 +56,8 @@ class MainLoop:
         self.__logger__.info("MainLoop killed")
 
     def __loop__(self):
+        self.__logger__.info("MainLoop start collecting frames")
+
         batch = [[]] * len(self.video_list)
 
         while True:
@@ -65,10 +67,12 @@ class MainLoop:
             self.__logger__.info("MainLoop collecting frames with iteration id '{}'".format(self.__iteration_id__))
             progress = False
 
+            # TODO: using vido.video_id
             for video_id, frame_collector in enumerate(self.__frame_collector_list__):
                 try:
                     frame = frame_collector.get_next()
 
+                    # TODO: using dict {}
                     batch[video_id].append((self.__iteration_id__, frame))
 
                     progress = True
@@ -76,6 +80,7 @@ class MainLoop:
                     batch[video_id].append((self.__iteration_id__, None))
 
                 if len(batch[video_id]) == self.detect_frame_batch_size:
+                    self.__logger__.info("Sending batch to video processor with id: '{}'".format(video_id))
                     self.__video_processor_list__[video_id].process_batch(batch[video_id])
 
                     batch[video_id] = []

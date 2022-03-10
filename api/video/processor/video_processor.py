@@ -1,5 +1,5 @@
 from multiprocessing import get_logger
-from threading import Thread
+from multiprocessing.pool import ThreadPool
 
 import cv2
 import dlib
@@ -24,19 +24,20 @@ class VideoProcessor:
         self.detect_frame_batch_size = detect_frame_batch_size
         self.detection_threshold = detection_threshold
 
+        self.thread_pool = ThreadPool(100)
+
         self.__logger__ = get_logger()
 
     def process_batch(self, batch):
-        thread = Thread(target=self.__process_batch__, args=(batch,))
-        thread.start()
-
-        return thread
+        self.thread_pool.apply_async(self.__process_batch__, args=(batch,))
 
     def __process_batch__(self, batch):
         expand_list = []
         tracker_class_list = []
 
         for frame_id, (iteration_id, frame) in enumerate(batch):
+            self.__logger__.info("Start processing iteration id: '{}' for video id: '{}'"
+                                 .format(iteration_id, self.video.video_id))
             bbox_class_list = []
 
             if frame is None:
