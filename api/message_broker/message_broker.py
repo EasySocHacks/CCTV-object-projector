@@ -4,10 +4,10 @@ from logging import getLogger
 from threading import Thread, Event
 
 import websockets
+from IPython.lib.display import YouTubeVideo
 
 from camera import Camera
 from main_loop.MainLoop import MainLoop
-from video import Video
 
 
 class MessageBroker:
@@ -64,8 +64,9 @@ class MessageBroker:
 
             self.__logger__.info("Appending camera's video with url '{}'".format(url))
 
-            self.__camera_video_list__.append(Video(url, video_id, Camera()))
+            self.__camera_video_list__.append(YouTubeVideo(url, video_id, Camera()))
         elif command == "START_PROCESSING_VIDEO":
+            # TODO: set to cuda
             self.main_loop = MainLoop(self.host, self.__camera_video_list__, "cpu")
             self.main_loop.start()
         elif command == "STOP_PROCESSING_VIDEO":
