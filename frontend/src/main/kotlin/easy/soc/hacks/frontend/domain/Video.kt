@@ -24,7 +24,7 @@ open class Video {
 
     @Column
     @OneToMany
-    var calibrationPointList = mutableListOf<CalibrationPoint>()
+    var calibrationPointList = listOf<CalibrationPoint>()
 }
 
 @Table

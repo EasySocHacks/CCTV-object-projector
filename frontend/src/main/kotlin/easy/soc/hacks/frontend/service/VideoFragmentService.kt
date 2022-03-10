@@ -14,7 +14,7 @@ class VideoFragmentService {
     fun save(videoFragment: VideoFragment) = videoFragmentRepository.save(videoFragment)
 
     fun getLatestManifest(video: Video): ByteArray {
-        val videoFragments = videoFragmentRepository.getTop2ByVideoOrderByIdDesc(video)
+        val videoFragments = videoFragmentRepository.getTop2ByVideoOrderByIdDesc(video).reversed()
         val manifestTextStringBuffer = StringBuilder()
 
         manifestTextStringBuffer.append("#EXTM3U\n")

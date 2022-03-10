@@ -7,7 +7,7 @@ import org.springframework.web.socket.WebSocketMessage
 import org.springframework.web.socket.WebSocketSession
 
 @Component
-class BackendWebSocketHandlerComponent: WebSocketHandler {
+class BackendWebSocketHandlerComponent : WebSocketHandler {
     companion object {
         var activeBackendWebSocketSession: WebSocketSession? = null
     }

@@ -1,11 +1,13 @@
 package easy.soc.hacks.frontend.controllers.view
 
 import easy.soc.hacks.frontend.component.BackendWebSocketHandlerComponent.Companion.activeBackendWebSocketSession
+import easy.soc.hacks.frontend.domain.CalibrationPointListWrapper
 import easy.soc.hacks.frontend.domain.CameraVideo
 import easy.soc.hacks.frontend.domain.Video
 import easy.soc.hacks.frontend.service.BackendBrokerService
 import easy.soc.hacks.frontend.service.SequenceService
 import easy.soc.hacks.frontend.service.VideoService
+import easy.soc.hacks.frontend.service.VideoService.Companion.videoStatus
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -29,6 +31,7 @@ class VideoController {
     @GetMapping("", "video/list/preview")
     fun previewVideoList(model: Model): String {
         model.addAttribute("videoList", videoService.findAll())
+        model.addAttribute("videoStatus", videoStatus)
 
         return "index"
     }
@@ -55,5 +58,30 @@ class VideoController {
         model["video"] = video
 
         return "calibrationVideo"
+    }
+
+    @PostMapping("video/{videoId}/calibration/save")
+    fun saveCalibration(
+        @PathVariable("videoId") videoId: Long,
+        @ModelAttribute calibrationPointListWrapper: CalibrationPointListWrapper
+    ): String {
+        videoService.save(videoService.getVideoById(videoId).get().apply {
+            calibrationPointList = calibrationPointListWrapper.toCalibrationPointList()
+        })
+
+        backendBrokerService.computeCalibrationMatrix(
+            activeBackendWebSocketSession!!,
+            videoId,
+            calibrationPointListWrapper.toCalibrationPointList()
+        )
+
+        return "redirect:/"
+    }
+
+    @PostMapping("video/start")
+    fun startVideoStream() : String {
+        backendBrokerService.startProcessingVideo(activeBackendWebSocketSession!!)
+
+        return "redirect:/"
     }
 }

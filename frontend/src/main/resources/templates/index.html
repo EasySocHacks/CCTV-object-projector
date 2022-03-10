@@ -11,5 +11,15 @@
 <body id="preview">
     <div id="videoPreview" th:include="videoPreview :: template (${videoList})"></div>
     <div id="mapPreview" th:include="mapPreview :: template"></div>
+    <div id="previewControls">
+        <th:block th:switch="${videoStatus.toString()}">
+            <form th:case="START" method="post">
+                <button th:id="previewControlStartButton" th:text="STOP"></button>
+            </form>
+            <form th:case="STOP" method="post" action="/video/start">
+                <button th:id="previewControlStopButton" th:text="START"></button>
+            </form>
+        </th:block>
+    </div>
 </body>
 </html>

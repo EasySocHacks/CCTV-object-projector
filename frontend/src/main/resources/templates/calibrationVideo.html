@@ -10,37 +10,47 @@
 <body>
 <!--    <div class="calibration-block" th:include="videoPreview :: drawableVideoBlock (${videoId})"></div>-->
 <!--    <div th:include="videoPreview :: playVideoScript (${ { videoId } })"></div>-->
-    <form th:action="'video/' + ${video.id} + 'calibration/save'" method="post">
+<form th:action="'/video/' + ${video.id} + '/calibration/save'" method="post">
+    <div class="pointsHeader">
+        <div th:text="#{video.calibration.screen}"></div>
+        <div th:text="#{video.calibration.real}"></div>
+    </div>
+    <div th:each="i : ${#numbers.sequence(0, 5)}">
         <div class="points">
-            <div class="pointsHeader">
-                <div th:text="#{video.calibration.screen}"></div>
-                <div th:text="#{video.calibration.real}"></div>
-            </div>
-
             <div class="pointsBody">
                 <div class="pointsRow">
-                    <div id="screenPoint0" class="screenPoint">
+                    <div th:id="'screenPoint' + ${i}" class="screenPoint">
                         <div>(</div>
-                        <input type="text" name="xScreen">
+                        <input th:if="${video.calibrationPointList.size() >= i + 1}" type="text" th:name="'xScreen' + ${i}"
+                               th:value="${video.calibrationPointList.get(i).getXScreen()}">
+                        <input th:unless="${video.calibrationPointList.size() >= i + 1}" type="text" th:name="'xScreen' + ${i}">
                         <div>;</div>
-                        <input type="text" name="yScreen">
+                        <input th:if="${video.calibrationPointList.size() >= i + 1}" type="text" th:name="'yScreen' + ${i}"
+                               th:value="${video.calibrationPointList.get(i).getYScreen()}">
+                        <input th:unless="${video.calibrationPointList.size() >= i + 1}" type="text" th:name="'yScreen' + ${i}">
                         <div>)</div>
                     </div>
 
-                    <div id="worldPoint0" class="worldPoint">
+                    <div th:id="'worldPoint' + ${i}" class="worldPoint">
                         <div>(</div>
-                        <input type="text" name="xWorld">
+                        <input th:if="${video.calibrationPointList.size() >= i + 1}" type="text" th:name="'xWorld' + ${i}"
+                               th:value="${video.calibrationPointList.get(i).getXWorld()}">
+                        <input th:unless="${video.calibrationPointList.size() >= i + 1}" type="text" th:name="'xWorld' + ${i}">
                         <div>;</div>
-                        <input type="text" name="yWorld">
+                        <input th:if="${video.calibrationPointList.size() >= i + 1}" type="text" th:name="'yWorld' + ${i}"
+                               th:value="${video.calibrationPointList.get(i).getYWorld()}">
+                        <input th:unless="${video.calibrationPointList.size() >= i + 1}" type="text" th:name="'yWorld' + ${i}">
                         <div>;</div>
-                        <input type="text" name="zWorld">
+                        <input th:if="${video.calibrationPointList.size() >= i + 1}" type="text" th:name="'zWorld' + ${i}"
+                               th:value="${video.calibrationPointList.get(i).getZWorld()}">
+                        <input th:unless="${video.calibrationPointList.size() >= i + 1}" type="text" th:name="'zWorld' + ${i}">
                         <div>)</div>
                     </div>
-                </div>
                 </div>
             </div>
-
-        <button type="submit" th:text="#{video.calibration.save}"></button>
-    </form>
+        </div>
+    </div>
+    <button type="submit" th:text="#{video.calibration.save}"></button>
+</form>
 </body>
 </html>
