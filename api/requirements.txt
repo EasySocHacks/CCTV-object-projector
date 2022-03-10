@@ -4,7 +4,7 @@ dlib==19.22.1
 Pillow==7.1.2
 pafy==0.5.5
 youtube_dl==2020.12.2
-ipython==7.29.0
+ipython==7.31.1
 torch==1.10.0
 requests==2.22.0
 typing==3.7.4
