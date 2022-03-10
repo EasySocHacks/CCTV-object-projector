@@ -4,10 +4,10 @@ from logging import getLogger
 from threading import Thread, Event
 
 import websockets
-from IPython.lib.display import YouTubeVideo
 
 from camera import Camera
 from main_loop.MainLoop import MainLoop
+from video.video import YouTubeVideo
 
 
 class MessageBroker:
