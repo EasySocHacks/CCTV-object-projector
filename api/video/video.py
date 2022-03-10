@@ -21,4 +21,4 @@ class YouTubeVideo(Video):
         pafy_url = pafy.new(url)
         play = pafy_url.getbest(preftype="mp4")
 
-        self.capture = cv2.VideoCapture(play.url)
+        self.video_capture = cv2.VideoCapture(play.url)
