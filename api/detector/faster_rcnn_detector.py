@@ -1,5 +1,5 @@
+import torch
 import torchvision
-from torch.nn.parallel import DistributedDataParallel
 
 from detector import Detector
 
@@ -11,16 +11,17 @@ class FasterRCNNDetector(Detector):
         self.device = device
 
         self.model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-        self.model = DistributedDataParallel(self.model)
+        self.model.requires_grad = False
         self.model.eval()
         self.model.to(self.device)
 
     def detect(self, image):
-        output = self.model(image)[0]
+        tensor = torch.unsqueeze(torchvision.transforms.ToTensor()(image), 0).to(self.device)
+        output = self.model(tensor)[0]
 
-        classes = output["labels"].cpu().numpy()
-        bboxes = output["boxes"].cpu().numpy()
-        scores = output["scores"].cpu().numpy()
+        classes = output["labels"].detach().cpu()
+        bboxes = output["boxes"].detach().cpu()
+        scores = output["scores"].detach().cpu()
 
         return bboxes, classes, scores
 

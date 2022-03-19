@@ -1,8 +1,6 @@
-from ctypes import c_bool
-
 import cv2
 import dlib
-from torch.multiprocessing import Queue, Process, get_logger, Value
+from torch.multiprocessing import Queue, Process, get_logger
 
 
 class VideoProcessor:
@@ -17,50 +15,42 @@ class VideoProcessor:
 
         self.queue = Queue()
 
-        self.process_started = Value(c_bool, False)
-        self._process = Process(
-            target=self._process_loop,
-            args=(
-                self.process_started,
-                self.queue,
-                self.processor_linker_queue,
-                self.device,
-                self.config.detector_type,
-                self.config.bbox_expander_type,
-            )
-        )
+        self._detector = self.config.detector_type(device)
+        # TODO: None == no expander ?
+        self._bbox_expander = self.config.bbox_expander_type(device)
+
+        # self._process = Process(
+        #     target=self._process_loop,
+        #     args=(
+        #         self.process_started,
+        #         self.queue,
+        #         self.processor_linker_queue,
+        #         self.device,
+        #         self.config.detector_type,
+        #         self.config.bbox_expander_type,
+        #     )
+        # )
 
         self._logger = get_logger()
 
-    def start(self):
-        self._logger.info("Starting VideoProcessor")
-        self._process.start()
-        self._logger.info("VideoProcessor started")
+    def generate_process(self):
+        self._logger.info("Generating VideoProcessor")
 
-    def kill(self):
-        self._logger.info("Killing VideoProcessor")
-        self._process.kill()
-        self.process_started.value = False
-        self._logger.info("VideoProcessor killed")
+        process = Process(
+            target=self._process_loop,
+            args=(
+                self.queue,
+                self.processor_linker_queue,
+            )
+        )
 
-    def join(self):
-        self._logger.info("Joining VideoProcessor")
-        self._process.join()
-        self.process_started.value = False
-        self._logger.info("VideoProcessor joined")
+        self._logger.info("VideoProcessor generated")
+
+        return process
 
     def _process_loop(self,
-                      process_started,
                       queue,
-                      processor_linker_queue,
-                      device,
-                      detector_type,
-                      bbox_expander_type):
-        detector = detector_type(device)
-        # TODO: None == no expander ?
-        bbox_expander = bbox_expander_type(device)
-        process_started.value = True
-
+                      processor_linker_queue):
         while True:
             # TODO: None == break?
             # TODO: timeout == break?
@@ -86,12 +76,10 @@ class VideoProcessor:
             self._process_batch(
                 processor_linker_queue,
                 video_id,
-                batch,
-                detector,
-                bbox_expander
+                batch
             )
 
-    def _process_batch(self, processor_linker_queue, video_id, batch, detector, bbox_expander):
+    def _process_batch(self, processor_linker_queue, video_id, batch):
         # expand_list = []
         tracker_class_list = []
 
@@ -115,7 +103,7 @@ class VideoProcessor:
                     "Starting detection for frame with iteration id '{}' and frame if '{}' for video id '{}'"
                         .format(iteration_id, frame_id, video_id)
                 )
-                bboxes, classes, scores = detector.detect(frame)
+                bboxes, classes, scores = self._detector.detect(frame)
                 self._logger.debug(
                     "Done detection for frame with iteration id '{}' and frame id '{}' for video id '{}'"
                         .format(iteration_id, frame_id, video_id)

@@ -19,7 +19,7 @@ class MainLoop:
         # TODO: change to video_processor_pool
         self._video_processor_list = []
         self._video_processor_queue_list = []
-        self._video_processor_started_value_list = []
+        self._video_processor_processes = []
 
         self._processor_linker = ProcessorLinker(self.config, self._video_meta)
 
@@ -32,13 +32,13 @@ class MainLoop:
             ))
 
             self._video_processor_queue_list.append(self._video_processor_list[-1].queue)
-            self._video_processor_started_value_list.append(self._video_processor_list[-1].process_started)
+
+            self._video_processor_processes.append(self._video_processor_list[-1].generate_process())
 
         self._main_loop_process = Process(
             target=self._loop,
             args=(
                 self._video_processor_queue_list,
-                self._video_processor_started_value_list
             )
         )
 
@@ -48,14 +48,14 @@ class MainLoop:
         state = self.__dict__.copy()
 
         state['_processor_linker'] = None
-        state['_video_processor_list'] = None
+        state['_video_processor_processes'] = None
         return state
 
     def start(self):
         self._logger.info("Starting MainLoop")
         self._processor_linker.start()
 
-        for video_processor in self._video_processor_list:
+        for video_processor in self._video_processor_processes:
             video_processor.start()
 
         self._main_loop_process.start()
@@ -65,7 +65,7 @@ class MainLoop:
         self._logger.info("Killing MainLoop")
         self._main_loop_process.kill()
 
-        for video_processor in self._video_processor_list:
+        for video_processor in self._video_processor_processes:
             video_processor.kill()
 
         self._processor_linker.kill()
@@ -85,18 +85,8 @@ class MainLoop:
 
         capture.release()
 
-    def _loop(self, video_processor_queue_list, video_processor_started_value_list):
+    def _loop(self, video_processor_queue_list):
         self._logger.info("MainLoop start collecting frames")
-
-        while True:
-            started = True
-            for is_started_value in video_processor_started_value_list:
-                if not is_started_value.value:
-                    started = False
-                    break
-
-            if started:
-                break
 
         frame_collector_dict = {}
         for video_id in self._video_dict:
