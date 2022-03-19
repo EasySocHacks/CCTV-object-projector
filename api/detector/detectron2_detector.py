@@ -2,12 +2,12 @@ from detectron2 import model_zoo
 from detectron2.config import get_cfg
 from detectron2.engine import DefaultPredictor
 
-from detector.common_detector import CommonDetector
+from detector import Detector
 
 classes_names = ["person"]
 
 
-class Detectron2Detector(CommonDetector):
+class Detectron2Detector(Detector):
     def __init__(self,
                  device,
                  model_name="COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml",
@@ -19,14 +19,13 @@ class Detectron2Detector(CommonDetector):
         detector_config.MODEL.WEIGHTS = model_weights
         detector_config.MODEL.DEVICE = device
         self._predictor = DefaultPredictor(detector_config)
-        self._predicted = {}
 
     def detect(self, image):
         output = self._predictor(image)
 
-        classes = output["instances"].pred_classes.to(self.device)
-        bboxes = output["instances"].pred_boxes.tensor.to(self.device)
-        scores = output["instances"].scores.to(self.device)
+        classes = output["instances"].pred_classes.cpu()
+        bboxes = output["instances"].pred_boxes.tensor.cpu()
+        scores = output["instances"].scores.cpu()
 
         return bboxes, classes, scores
 

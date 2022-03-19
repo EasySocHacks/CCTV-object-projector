@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class CommonDetector(ABC):
+class Detector(ABC):
     def __init__(self, device):
         self.device = device
 

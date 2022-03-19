@@ -1,77 +1,67 @@
 import asyncio
 import json
-from logging import getLogger
-from threading import Thread, Event
+from multiprocessing import get_logger
+from threading import Event
 
 import websockets
 
 from camera import Camera
-from main_loop.MainLoop import MainLoop
-from video.video import YouTubeVideo
+from main_loop import MainLoop
+from video import YouTubeVideo
 
 
 class MessageBroker:
-    def __init__(self, host):
-        self.host = host
-        self.__logger__ = getLogger()
+    def __init__(self, config):
+        self.config = config
+        self._logger = get_logger()
 
-        self.__camera_video_list__ = []
+        self._kill_thread_event = Event()
 
-        self.__working_process__ = Thread(target=self.__run_process__)
-        self.__kill_thread_event__ = Event()
-
-        self.main_loop = None
+        self._main_loop = MainLoop(config)
 
     def start(self):
-        self.__logger__.info("Starting MessageBroker")
-        self.__working_process__.start()
-        self.__logger__.info("MessageBroker started")
+        self._logger.info("Starting MessageBroker")
 
-    def join(self):
-        self.__logger__.info("Joining MessageBroker")
-        self.__working_process__.join()
-        self.__logger__.info("MessageBroker joined")
+        asyncio.run(self._work())
+        self._logger.info("MessageBroker started")
 
     def kill(self):
-        self.__logger__.info("Killing MessageBroker")
-        self.__kill_thread_event__.set()
-        self.__logger__.info("MessageBroker killed")
+        self._logger.info("Killing MessageBroker")
+        self._kill_thread_event.set()
+        self._logger.info("MessageBroker killed")
 
-    def __run_process__(self):
-        asyncio.run(self.__work__())
-
-    async def __work__(self):
-        async with websockets.connect("ws://{}/backend/websocket".format(self.host)) as websocket:
-            self.__logger__.info("Establish websocket connection with frontend")
+    async def _work(self):
+        async with websockets.connect(
+                "ws://{}:{}/backend/websocket".format(self.config.host, self.config.port)
+        ) as websocket:
+            self._logger.info("Establish websocket connection with frontend")
 
             while True:
-                if self.__kill_thread_event__.is_set():
+                if self._kill_thread_event.is_set():
                     break
 
-                self.__logger__.info("Awaiting command from frontend")
+                self._logger.info("Awaiting command from frontend")
 
                 response_data = await websocket.recv()
                 response_json = json.loads(response_data)
-                self.__proceed_command__(response_json)
+                self._proceed_command(response_json)
 
-    def __proceed_command__(self, response):
+    def _proceed_command(self, response):
         command = response["command"]
-        self.__logger__.info("Processing command '{}', received from frontend".format(command))
+        self._logger.info("Processing command '{}', received from frontend".format(command))
 
         if command == "APPEND_CAMERA_VIDEO":
             video_id = response["id"]
-            url = response["url"]
+            # TODO: change to 'uri'
+            uri = response["url"]
 
-            self.__logger__.info("Appending camera's video with url '{}'".format(url))
+            self._logger.info("Appending camera's video with uri '{}'".format(uri))
 
-            self.__camera_video_list__.append(YouTubeVideo(url, video_id, Camera()))
+            # TODO: camera/file video
+            self._main_loop.append_video(YouTubeVideo(uri, video_id, Camera()))
         elif command == "START_PROCESSING_VIDEO":
-            # TODO: set to cuda
-            self.main_loop = MainLoop(self.host, self.__camera_video_list__, "cpu")
-            self.main_loop.start()
-        elif command == "STOP_PROCESSING_VIDEO":
-            pass
+            self._main_loop.start()
         elif command == "COMPUTE_CALIBRATION_MATRIX":
             pass
         else:
-            self.__logger__.warning("Unknown command '{}', received from frontend".format(command))
+            self._logger.warning("Unknown command '{}', received from frontend".format(command))

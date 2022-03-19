@@ -1,50 +1,48 @@
 import json
 import subprocess
 import tempfile
-from logging import getLogger
-from threading import Thread, Event
+from threading import Thread
 
 import cv2
 import ffmpeg
 import requests
+from torch.multiprocessing import Process, get_logger, Queue
 
 
 class ProcessorLinker:
-    def __init__(self, host, video_list, send_frame_batch_size=50):
-        self.host = host
-        self.video_list = video_list
-        self.send_frame_batch_size = send_frame_batch_size
+    def __init__(self, config, video_meta):
+        self.config = config
+        self.video_meta = video_meta
 
-        self.__processed_dict__ = {}
+        self.queue = Queue()
+        self._linker_process = Process(target=self._link, args=(self.queue, self.video_meta,))
 
-        self.__linker_process__ = Thread(target=self.__link__)
-        self.__kill_thread_event__ = Event()
-
-        self.__logger__ = getLogger()
+        self._logger = get_logger()
 
     def start(self):
-        self.__logger__.info("Starting ProcessLinker")
-        self.__linker_process__.start()
-        self.__logger__.info("ProcessLinker started")
+        self._logger.info("Starting ProcessLinker")
+        self._linker_process.start()
+        self._logger.info("ProcessLinker started")
+
+    def join(self):
+        self._logger.info("Joining ProcessLinker")
+        self._linker_process.kill()
+        self._logger.info("ProcessLinker joined")
 
     def kill(self):
-        self.__logger__.info("Killing ProcessLinker")
-        self.__kill_thread_event__.set()
-        self.__logger__.info("ProcessLinker killed")
+        self._logger.info("Killing ProcessLinker")
+        self._linker_process.kill()
+        self._logger.info("ProcessLinker killed")
 
-    def append_processed(self, video_id, iteration_id, frame, bbox_class_list):
-        if iteration_id not in self.__processed_dict__:
-            self.__processed_dict__[iteration_id] = []
+    def _convert_and_send(self, sequence_id, batches):
+        self._logger.debug("Prepare to send sequence with id '{}'".format(sequence_id))
 
-        self.__processed_dict__[iteration_id].append((video_id, frame, bbox_class_list))
+        for video_id in batches:
+            video_batch = batches[video_id]
 
-    def __send__(self, sequence_id, batch):
-        self.__logger__.debug("Prepare to send sequence with id '{}'".format(sequence_id))
-
-        for video_id, video_batch in enumerate(batch):
-            fps = self.video_list[video_id].video_capture.get(cv2.CAP_PROP_FPS)
-            width = self.video_list[video_id].video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
-            height = self.video_list[video_id].video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            fps = int(self.video_meta[video_id]["fps"])
+            width = int(self.video_meta[video_id]["width"])
+            height = int(self.video_meta[video_id]["height"])
 
             with tempfile.NamedTemporaryFile(suffix=".mp4") as tmp_file_mp4:
                 writer = cv2.VideoWriter(
@@ -59,12 +57,20 @@ class ProcessorLinker:
 
                 writer.release()
 
+                # TODO: change to subprocess
                 with tempfile.NamedTemporaryFile(suffix=".ts") as tmp_file_ts:
+                    # subprocess.call("ffmpeg -y -i {} -muxdelay 0 -output_ts_offset {} -vcodec copy {}".format(
+                    #     tmp_file_mp4.name,
+                    #     sequence_id,
+                    #     tmp_file_ts.name
+                    # ), shell=True)
+                    # TODO: different FPS?
                     ffmpeg \
                         .input(tmp_file_mp4.name) \
                         .output(tmp_file_ts.name, vcodec='libx264', acodec='aac', audio_bitrate='160K',
                                 vbsf='h264_mp4toannexb', format='mpegts',
-                                muxdelay=str(float(sequence_id * self.send_frame_batch_size) / fps)) \
+                                muxdelay=0,
+                                output_ts_offset=str(float(sequence_id * self.config.stride_between_send) / fps)) \
                         .run(capture_stdout=True, capture_stderr=True, quiet=True, overwrite_output=True)
 
                     duration_format = subprocess.check_output([
@@ -77,10 +83,12 @@ class ProcessorLinker:
                     data = tmp_file_ts.read()
 
                     # TODO: Send whole batch
-                    # TODO: http/https
-                    requests.post("http://{}/video/{}/fragment/{}".format(
-                        self.host,
-                        self.video_list[video_id].video_id,
+                    requests.post("{}://{}:{}/api/v{}/video/{}/fragment/{}".format(
+                        self.config.method,
+                        self.config.host,
+                        self.config.port,
+                        self.config.api_version,
+                        video_id,
                         sequence_id
                     ), data=data,
                         headers={
@@ -91,23 +99,43 @@ class ProcessorLinker:
 
                 tmp_file_mp4.close()
 
-        self.__logger__.info("Sent batch '{}' to frontend".format(sequence_id))
+        self._logger.debug("Sent batch '{}' to frontend".format(sequence_id))
 
-    def __link__(self):
-        iteration_id = 0
+    def _link(self, queue, video_meta):
+        processed_dict = {}
 
-        batch = [[]] * self.send_frame_batch_size
+        next_sequence_id = 0
+        next_iteration_id = 0
+
+        batches = {}
+        append_cnt = 0
 
         while True:
-            self.__logger__.debug("Start linking iteration id '{}'".format(iteration_id))
+            video_id, iteration_id, frame, bbox_class_list = queue.get()
 
-            if iteration_id in self.__processed_dict__ and \
-                    len(self.__processed_dict__[iteration_id]) >= len(self.video_list):
-                for video_id, frame, bbox_class_list in self.__processed_dict__[iteration_id]:
-                    batch[video_id].append((frame, bbox_class_list))
+            if iteration_id not in processed_dict:
+                processed_dict[iteration_id] = []
 
-            if len(batch[0]) >= self.send_frame_batch_size:
-                Thread(target=self.__send__, args=(iteration_id / self.send_frame_batch_size, batch,)).start()
-                batch = [[] * self.send_frame_batch_size]
+            processed_dict[iteration_id].append((video_id, frame, bbox_class_list))
 
-            iteration_id += 1
+            if iteration_id == next_iteration_id and len(processed_dict[next_iteration_id]) == len(video_meta):
+                self._logger.debug("Start linking iteration id '{}'".format(iteration_id))
+
+                for video_id, frame, bbox_class_list in processed_dict[next_iteration_id]:
+                    if video_id not in batches:
+                        batches[video_id] = []
+
+                    batches[video_id].append((frame, bbox_class_list))
+                    append_cnt += 1
+
+                del processed_dict[next_iteration_id]
+
+                if append_cnt == self.config.stride_between_send * len(video_meta):
+                    Thread(target=self._convert_and_send, args=(next_sequence_id, batches,)).start()
+                    next_sequence_id += 1
+
+                    batches = {}
+
+                    append_cnt = 0
+
+                next_iteration_id += 1

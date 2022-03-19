@@ -1,6 +1,5 @@
 from abc import ABC
 
-import cv2
 import pafy
 
 
@@ -8,8 +7,6 @@ class Video(ABC):
     def __init__(self, video_id, camera):
         self.video_id = video_id
         self.camera = camera
-
-        self.video_capture = None
 
 
 class YouTubeVideo(Video):
@@ -21,4 +18,4 @@ class YouTubeVideo(Video):
         pafy_url = pafy.new(url)
         play = pafy_url.getbest(preftype="mp4")
 
-        self.video_capture = cv2.VideoCapture(play.url)
+        self.uri = play.url

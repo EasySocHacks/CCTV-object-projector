@@ -1,69 +1,132 @@
-from multiprocessing import get_logger
-from multiprocessing.pool import ThreadPool
+from ctypes import c_bool
 
 import cv2
 import dlib
-from PIL import Image
-
-from bbox_expander.bbox_expander import BboxExpander
+from torch.multiprocessing import Queue, Process, get_logger, Value
 
 
 class VideoProcessor:
     def __init__(self,
-                 video,
-                 processor_linker,
-                 detector,
-                 expander,
-                 detect_frame_batch_size=10,
-                 detection_threshold=0.6
+                 config,
+                 device,
+                 processor_linker_queue
                  ):
-        self.video = video
-        self.processor_linker = processor_linker
-        self.detector = detector
-        self.expander = expander
-        self.detect_frame_batch_size = detect_frame_batch_size
-        self.detection_threshold = detection_threshold
+        self.config = config
+        self.device = device
+        self.processor_linker_queue = processor_linker_queue
 
-        self.thread_pool = ThreadPool(100)
+        self.queue = Queue()
 
-        self.__logger__ = get_logger()
+        self.process_started = Value(c_bool, False)
+        self._process = Process(
+            target=self._process_loop,
+            args=(
+                self.process_started,
+                self.queue,
+                self.processor_linker_queue,
+                self.device,
+                self.config.detector_type,
+                self.config.bbox_expander_type,
+            )
+        )
 
-    def process_batch(self, batch):
-        self.thread_pool.apply_async(self.__process_batch__, args=(batch,))
+        self._logger = get_logger()
 
-    def __process_batch__(self, batch):
-        expand_list = []
+    def start(self):
+        self._logger.info("Starting VideoProcessor")
+        self._process.start()
+        self._logger.info("VideoProcessor started")
+
+    def kill(self):
+        self._logger.info("Killing VideoProcessor")
+        self._process.kill()
+        self.process_started.value = False
+        self._logger.info("VideoProcessor killed")
+
+    def join(self):
+        self._logger.info("Joining VideoProcessor")
+        self._process.join()
+        self.process_started.value = False
+        self._logger.info("VideoProcessor joined")
+
+    def _process_loop(self,
+                      process_started,
+                      queue,
+                      processor_linker_queue,
+                      device,
+                      detector_type,
+                      bbox_expander_type):
+        detector = detector_type(device)
+        # TODO: None == no expander ?
+        bbox_expander = bbox_expander_type(device)
+        process_started.value = True
+
+        while True:
+            # TODO: None == break?
+            # TODO: timeout == break?
+            data = queue.get()
+
+            if data is None:
+                break
+
+            video_id, batch = data
+
+            # process_thread = Thread(
+            #     target=self._process_batch,
+            #     args=(
+            #         processor_linker_queue,
+            #         video_id,
+            #         batch,
+            #         detector,
+            #         bbox_expander,
+            #     )
+            # )
+            #
+            # process_thread.start()
+            self._process_batch(
+                processor_linker_queue,
+                video_id,
+                batch,
+                detector,
+                bbox_expander
+            )
+
+    def _process_batch(self, processor_linker_queue, video_id, batch, detector, bbox_expander):
+        # expand_list = []
         tracker_class_list = []
 
+        # TODO: Add video_id to incoming batches
+        # TODO: Fix current for
         for frame_id, (iteration_id, frame) in enumerate(batch):
-            self.__logger__.info("Start processing iteration id: '{}' for video id: '{}'"
-                                 .format(iteration_id, self.video.video_id))
+            self._logger.debug("Start processing frame with iteration id '{}' for video id '{}' and frame id '{}'"
+                               .format(iteration_id, video_id, frame_id))
             bbox_class_list = []
 
             if frame is None:
-                self.__logger__.info("VideoProcessor for video id '{}' process dummy None frame on iteration id '{}'"
-                                     .format(self.video.video_id, iteration_id))
-                self.processor_linker.append_processed(self.video.video_id, iteration_id, None, None)
+                self._logger.debug("Processed dummy frame with iteration id '{}' for video id '{}'"
+                                   .format(iteration_id, video_id))
+                processor_linker_queue.put((video_id, iteration_id, None, None))
                 continue
-
-            self.__logger__.info("VideoProcessor for video id '{}' processing frame with iteration id '{}'"
-                                 .format(self.video.video_id, iteration_id))
 
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            if frame_id % self.detect_frame_batch_size == 0:
-                self.__logger__.info("VideoProcessor for video id '{}' starting detection on iteration id '{}'"
-                                     .format(self.video.video_id, iteration_id))
-                bboxes, classes, scores = self.detector.detect(frame)
-                self.__logger__.info("VideoProcessor for vido id '{}' done detection on iteration id '{}'"
-                                     .format(self.video.video_id, iteration_id))
+            if frame_id == 0:
+                self._logger.debug(
+                    "Starting detection for frame with iteration id '{}' and frame if '{}' for video id '{}'"
+                        .format(iteration_id, frame_id, video_id)
+                )
+                bboxes, classes, scores = detector.detect(frame)
+                self._logger.debug(
+                    "Done detection for frame with iteration id '{}' and frame id '{}' for video id '{}'"
+                        .format(iteration_id, frame_id, video_id)
+                )
 
                 for obj_bbox, obj_class, obj_score in zip(bboxes, classes, scores):
                     # TODO: OOP?
-                    if obj_class == 0:
+                    if obj_class != 0 and obj_class != 2:
                         continue
 
-                    if obj_score < self.detection_threshold:
+                    if obj_score < self.config.detection_threshold:
                         continue
 
                     tracker_class_list.append((dlib.correlation_tracker(), obj_class))
@@ -77,33 +140,56 @@ class VideoProcessor:
                         )
                     )
 
-                    cv2.rectangle(
-                        frame,
-                        (int(obj_bbox[0]), int(obj_bbox[1])),
-                        (int(obj_bbox[2]), int(obj_bbox[3])),
-                        (0, 0, 255)
-                    )
+                    # frame = cv2.rectangle(
+                    #     frame,
+                    #     (int(obj_bbox[0]), int(obj_bbox[1])),
+                    #     (int(obj_bbox[2]), int(obj_bbox[3])),
+                    #     (0, 0, 255)
+                    # )
 
                     croped_image = rgb_frame[
                                    int(obj_bbox[1]):int(obj_bbox[3]),
                                    int(obj_bbox[0]):int(obj_bbox[2])
                                    ]
 
-                    expand = self.expander.expand(Image.fromarray(croped_image))
-                    expand_bbox = BboxExpander.apply_expand(obj_bbox, expand)
+                    # expand = expander.expand(Image.fromarray(croped_image))
+                    # expand_bbox = BboxExpander.apply_expand(obj_bbox, expand)
 
-                    bbox_class_list.append((expand_bbox, obj_class))
+                    # bbox_class_list.append((expand_bbox, obj_class))
+                    bbox_class_list.append((obj_bbox, obj_class))
 
-                    cv2.rectangle(
-                        frame,
-                        (int(expand_bbox[0]), int(expand_bbox[1])),
-                        (int(expand_bbox[2]), int(expand_bbox[3])),
-                        (255, 0, 0)
-                    )
+                    # cv2.rectangle(
+                    #     frame,
+                    #     (int(expand_bbox[0]), int(expand_bbox[1])),
+                    #     (int(expand_bbox[2]), int(expand_bbox[3])),
+                    #     (255, 0, 0)
+                    # )
 
-                    expand_list.append(expand)
+                    # expand_list.append(expand)
             else:
-                for (tracker, obj_class), expand in zip(tracker_class_list, expand_list):
+                # for (tracker, obj_class), expand in zip(tracker_class_list, expand_list):
+                #     tracker.update(rgb_frame)
+                #     tracker_position = tracker.get_position()
+                #
+                #     bbox = [
+                #         tracker_position.left(),
+                #         tracker_position.top(),
+                #         tracker_position.right(),
+                #         tracker_position.bottom()
+                #     ]
+                #
+                #     expand_bbox = BboxExpander.apply_expand(bbox, expand)
+                #
+                #     bbox_class_list.append((expand_bbox, obj_class))
+                #
+                #     cv2.rectangle(
+                #         frame,
+                #         (int(expand_bbox[0]), int(expand_bbox[1])),
+                #         (int(expand_bbox[2]), int(expand_bbox[3])),
+                #         (255, 0, 0)
+                #     )
+
+                for tracker, obj_class in tracker_class_list:
                     tracker.update(rgb_frame)
                     tracker_position = tracker.get_position()
 
@@ -114,17 +200,18 @@ class VideoProcessor:
                         tracker_position.bottom()
                     ]
 
-                    expand_bbox = BboxExpander.apply_expand(bbox, expand)
+                    # expand_bbox = BboxExpander.apply_expand(bbox, expand)
 
-                    bbox_class_list.append((expand_bbox, obj_class))
+                    # bbox_class_list.append((expand_bbox, obj_class))
+                    bbox_class_list.append((bbox, obj_class))
 
-                    cv2.rectangle(
+                    frame = cv2.rectangle(
                         frame,
-                        (int(expand_bbox[0]), int(expand_bbox[1])),
-                        (int(expand_bbox[2]), int(expand_bbox[3])),
+                        (int(bbox[0]), int(bbox[1])),
+                        (int(bbox[2]), int(bbox[3])),
                         (255, 0, 0)
                     )
 
-            self.processor_linker.append_processed(self.video.video_id, iteration_id, frame, bbox_class_list)
-            self.__logger__.info("VideoProcessor for video id '{}' done processing iteration id '{}'"
-                                 .format(self.video.video_id, iteration_id))
+            processor_linker_queue.put((video_id, iteration_id, frame, bbox_class_list))
+            self._logger.debug("Done processing frames with iteration id '{}' for video id '{}'"
+                               .format(iteration_id, video_id))

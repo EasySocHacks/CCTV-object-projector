@@ -1,7 +1,7 @@
 import torch
 from torchvision import transforms
 
-from bbox_expander.bbox_expand_net import BboxExpandNet
+from bbox_expander import BboxExpandNet
 
 
 class BboxExpander:
@@ -42,5 +42,3 @@ class BboxExpander:
         ny = expand[3] * (nh / 2.0) + y
 
         return [nx - nw / 2.0, ny - nh / 2.0, nx + nw / 2.0, ny + nh / 2.0]
-
-
