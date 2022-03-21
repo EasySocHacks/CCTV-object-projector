@@ -8,8 +8,7 @@
     <link rel="stylesheet" href="/css/calibrationVideo.css">
 </head>
 <body>
-<!--    <div class="calibration-block" th:include="videoPreview :: drawableVideoBlock (${videoId})"></div>-->
-<!--    <div th:include="videoPreview :: playVideoScript (${ { videoId } })"></div>-->
+<img th:src="@{'api/v1/video' + video.id + 'calibration'}">
 <form th:action="'/video/' + ${video.id} + '/calibration/save'" method="post">
     <div class="pointsHeader">
         <div th:text="#{video.calibration.screen}"></div>

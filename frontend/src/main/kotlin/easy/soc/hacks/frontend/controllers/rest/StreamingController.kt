@@ -1,7 +1,9 @@
 package easy.soc.hacks.frontend.controllers.rest
 
 import easy.soc.hacks.frontend.domain.VideoFragment
+import easy.soc.hacks.frontend.domain.VideoScreenshot
 import easy.soc.hacks.frontend.service.VideoFragmentService
+import easy.soc.hacks.frontend.service.VideoScreenshotService
 import easy.soc.hacks.frontend.service.VideoService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
@@ -17,6 +19,9 @@ class StreamingController {
 
     @Autowired
     private lateinit var videoFragmentService: VideoFragmentService
+
+    @Autowired
+    private lateinit var videoScreenshotService: VideoScreenshotService
 
     @PostMapping("video/{videoId}/fragment/{fragmentId}")
     fun pushFragment(
@@ -72,5 +77,29 @@ class StreamingController {
         } catch (e: Exception) {
             ResponseEntity.status(INTERNAL_SERVER_ERROR).build()
         }
+    }
+
+    @PostMapping("video/{videoId}/screenshot")
+    fun postScreenshot(
+        @PathVariable("videoId") videoId: Long,
+        @RequestBody data: ByteArray
+    ): ResponseEntity<Unit> {
+        videoScreenshotService.save(
+            VideoScreenshot(
+                video = videoService.getVideoById(videoId).get(),
+                data = data
+            )
+        )
+
+        return ResponseEntity.ok().build()
+    }
+
+    @GetMapping("video/{videoId}/screenshot")
+    fun getScreenshot(
+        @PathVariable("videoId") videoId: Long
+    ): ResponseEntity<ByteArray> {
+        return ResponseEntity.ok().body(
+            videoScreenshotService.getVideoScreenshotByVideoId(videoId).get().data
+        )
     }
 }
