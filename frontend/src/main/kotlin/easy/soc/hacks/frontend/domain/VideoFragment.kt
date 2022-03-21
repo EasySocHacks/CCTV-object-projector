@@ -6,35 +6,17 @@ import javax.persistence.*
 @Table
 @Entity
 @Data
-class VideoFragment {
-    companion object {
-        @Transient
-        const val sequenceName = "VIDEO_FRAGMENT_SEQUENCE"
-    }
-
+class VideoFragment(
     @Id
     @Column(nullable = false)
-    var id: Long? = null
+    val id: Long? = null,
 
     @Column(nullable = false)
-    var duration: Double? = null
+    val duration: Double,
 
     @Column(nullable = false)
-    var data: ByteArray? = null
+    val data: ByteArray,
 
-    @Id
-    @Column(nullable = false)
     @OneToOne
-    var video: Video? = null
-}
-
-open class VideoFragmentNode(
-    val videoFragment: VideoFragment,
-    var next: VideoFragmentNode? = null
+    val video: Video
 )
-
-class DummyVideoFragmentNode : VideoFragmentNode(VideoFragment().apply {
-    id = -1
-    duration = 0.0
-    data = ByteArray(0)
-})

@@ -2,43 +2,46 @@ package easy.soc.hacks.frontend.domain
 
 import lombok.Data
 import javax.persistence.*
+import javax.persistence.InheritanceType.JOINED
 
 @Table
 @Entity
+@Inheritance(strategy = JOINED)
 @Data
-open class Video {
-    companion object {
-        @Transient
-        const val sequenceName = "VIDEO_SEQUENCE"
-    }
-
+class Video(
     @Id
     @Column(nullable = false)
-    var id: Long? = null
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long? = null,
 
     @Column(nullable = false)
-    var name: String? = null
+    val name: String,
 
-    @Column
-    var calibration: Calibration? = null
-
-    @Column
+    @Column(nullable = false)
     @OneToMany
-    var calibrationPointList = listOf<CalibrationPoint>()
-}
+    val calibrationPointList: List<CalibrationPoint> = emptyList()
+)
 
 @Table
 @Entity
 @Data
-class CameraVideo : Video() {
+class CameraVideo(
+    id: Long? = null,
+    name: String,
+    calibrationPointList: List<CalibrationPoint> = emptyList(),
+
     @Column(nullable = false)
-    var url: String? = null
-}
+    val url: String
+) : Video(id, name, calibrationPointList)
 
 @Table
 @Entity
 @Data
-class FileVideo : Video() {
+class FileVideo(
+    id: Long? = null,
+    name: String,
+    calibrationPointList: List<CalibrationPoint> = emptyList(),
+
     @Column(nullable = false)
-    var path: String? = null
-}
+    val path: String
+) : Video(id, name, calibrationPointList)

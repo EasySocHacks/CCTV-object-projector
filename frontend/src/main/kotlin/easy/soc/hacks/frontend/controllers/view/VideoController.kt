@@ -3,9 +3,8 @@ package easy.soc.hacks.frontend.controllers.view
 import easy.soc.hacks.frontend.component.BackendWebSocketHandlerComponent.Companion.activeBackendWebSocketSession
 import easy.soc.hacks.frontend.domain.CalibrationPointListWrapper
 import easy.soc.hacks.frontend.domain.CameraVideo
-import easy.soc.hacks.frontend.domain.Video
 import easy.soc.hacks.frontend.service.BackendBrokerService
-import easy.soc.hacks.frontend.service.SequenceService
+import easy.soc.hacks.frontend.service.CalibrationPointService
 import easy.soc.hacks.frontend.service.VideoService
 import easy.soc.hacks.frontend.service.VideoService.Companion.videoStatus
 import org.springframework.beans.factory.annotation.Autowired
@@ -23,10 +22,10 @@ class VideoController {
     private lateinit var backendBrokerService: BackendBrokerService
 
     @Autowired
-    private lateinit var sequenceService: SequenceService
+    private lateinit var videoService: VideoService
 
     @Autowired
-    private lateinit var videoService: VideoService
+    private lateinit var calibrationPointService: CalibrationPointService
 
     @GetMapping("", "video/list/preview")
     fun previewVideoList(model: Model): String {
@@ -43,9 +42,7 @@ class VideoController {
 
     @PostMapping("video/add")
     fun addVideoPost(@ModelAttribute cameraVideo: CameraVideo): String {
-        val savedVideo = videoService.save(cameraVideo.apply {
-            id = sequenceService.nextIdFor(Video.sequenceName)
-        }) as CameraVideo
+        val savedVideo = videoService.save(cameraVideo) as CameraVideo
         backendBrokerService.appendCameraVideo(activeBackendWebSocketSession!!, savedVideo)
 
         return "redirect:/"
@@ -65,9 +62,19 @@ class VideoController {
         @PathVariable("videoId") videoId: Long,
         @ModelAttribute calibrationPointListWrapper: CalibrationPointListWrapper
     ): String {
-        videoService.save(videoService.getVideoById(videoId).get().apply {
-            calibrationPointList = calibrationPointListWrapper.toCalibrationPointList()
-        })
+        // TODO: Change CameraVideo to Video inheritance
+        with(videoService.getVideoById(videoId).get() as CameraVideo) {
+            videoService.save(
+                CameraVideo(
+                    id = id,
+                    name = name,
+                    calibrationPointList = calibrationPointListWrapper.toCalibrationPointList().map {
+                        calibrationPointService.save(it)
+                    },
+                    url = url
+                )
+            )
+        }
 
         backendBrokerService.computeCalibrationMatrix(
             activeBackendWebSocketSession!!,
@@ -79,7 +86,7 @@ class VideoController {
     }
 
     @PostMapping("video/start")
-    fun startVideoStream() : String {
+    fun startVideoStream(): String {
         backendBrokerService.startProcessingVideo(activeBackendWebSocketSession!!)
 
         return "redirect:/"

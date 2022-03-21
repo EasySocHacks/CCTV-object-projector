@@ -26,13 +26,14 @@ class StreamingController {
         @RequestBody data: ByteArray
     ): ResponseEntity<Unit> {
         return try {
-            val videoFragment = VideoFragment().apply {
-                this.id = fragmentId
-                this.duration = fragmentDuration
-                this.data = data
-                this.video = videoService.getVideoById(videoId).get()
-            }
-            videoFragmentService.save(videoFragment)
+            videoFragmentService.save(
+                VideoFragment(
+                    id = fragmentId,
+                    duration = fragmentDuration,
+                    data = data,
+                    video = videoService.getVideoById(videoId).get()
+                )
+            )
 
             ResponseEntity.ok().build()
         } catch (e: NoSuchElementException) {

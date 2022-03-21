@@ -4,7 +4,7 @@
         <p th:text="${video.name}" style="height: 20px">Video Stream ID</p>
         <div class="videoBlock" th:include=":: videoBlock (${video.id})"></div>
         <a class="calibration-required-notice"
-           th:if="${video.calibration} == null"
+           th:if="${video.calibrationPointList.isEmpty()}"
            th:text="#{video.preview.calibration.required}"
            th:href="'/video/' + ${video.id} + '/calibration/'">
         </a>
