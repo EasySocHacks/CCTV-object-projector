@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/css/calibrationVideo.css">
 </head>
 <body>
-<img th:src="@{'api/v1/video' + video.id + 'calibration'}">
+<img th:src="@{'api/v1/video/' + ${video.id} + '/calibration'}">
 <form th:action="'/video/' + ${video.id} + '/calibration/save'" method="post">
     <div class="pointsHeader">
         <div th:text="#{video.calibration.screen}"></div>
