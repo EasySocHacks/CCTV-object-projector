@@ -1,6 +1,6 @@
-package easy.soc.hacks.frontend.configurations
+package easy.soc.hacks.frontend.configuration
 
-import easy.soc.hacks.frontend.beans.localeChangeInterceptor
+import easy.soc.hacks.frontend.bean.localeChangeInterceptor
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer

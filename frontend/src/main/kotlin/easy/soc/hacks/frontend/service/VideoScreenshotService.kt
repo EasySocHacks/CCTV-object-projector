@@ -1,7 +1,7 @@
-package easy.soc.hacks.frontend.services
+package easy.soc.hacks.frontend.service
 
-import easy.soc.hacks.frontend.domains.VideoScreenshot
-import easy.soc.hacks.frontend.repositories.VideoScreenshotRepository
+import easy.soc.hacks.frontend.domain.VideoScreenshot
+import easy.soc.hacks.frontend.repository.VideoScreenshotRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 

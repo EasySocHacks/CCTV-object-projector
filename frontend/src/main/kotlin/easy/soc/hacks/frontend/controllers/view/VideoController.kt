@@ -1,12 +1,12 @@
 package easy.soc.hacks.frontend.controllers.view
 
-import easy.soc.hacks.frontend.components.BackendWebSocketHandlerComponent.Companion.activeBackendWebSocketSession
-import easy.soc.hacks.frontend.domains.CalibrationPointListWrapper
-import easy.soc.hacks.frontend.domains.CameraVideo
-import easy.soc.hacks.frontend.services.BackendBrokerService
-import easy.soc.hacks.frontend.services.CalibrationPointService
-import easy.soc.hacks.frontend.services.VideoService
-import easy.soc.hacks.frontend.services.VideoService.Companion.videoStatus
+import easy.soc.hacks.frontend.component.BackendWebSocketHandlerComponent.Companion.activeBackendWebSocketSession
+import easy.soc.hacks.frontend.domain.CalibrationPointListWrapper
+import easy.soc.hacks.frontend.domain.CameraVideo
+import easy.soc.hacks.frontend.service.BackendBrokerService
+import easy.soc.hacks.frontend.service.CalibrationPointService
+import easy.soc.hacks.frontend.service.VideoService
+import easy.soc.hacks.frontend.service.VideoService.Companion.videoStatus
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model

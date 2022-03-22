@@ -1,7 +1,7 @@
-package easy.soc.hacks.frontend.services
+package easy.soc.hacks.frontend.service
 
-import easy.soc.hacks.frontend.domains.CalibrationPoint
-import easy.soc.hacks.frontend.repositories.CalibrationPointRepository
+import easy.soc.hacks.frontend.domain.CalibrationPoint
+import easy.soc.hacks.frontend.repository.CalibrationPointRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 

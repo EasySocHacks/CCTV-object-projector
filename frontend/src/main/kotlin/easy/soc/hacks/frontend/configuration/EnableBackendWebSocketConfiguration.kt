@@ -1,6 +1,6 @@
-package easy.soc.hacks.frontend.configurations
+package easy.soc.hacks.frontend.configuration
 
-import easy.soc.hacks.frontend.components.BackendWebSocketHandlerComponent
+import easy.soc.hacks.frontend.component.BackendWebSocketHandlerComponent
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.socket.config.annotation.EnableWebSocket
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer

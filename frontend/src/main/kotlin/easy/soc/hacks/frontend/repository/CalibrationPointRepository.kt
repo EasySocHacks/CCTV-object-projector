@@ -1,6 +1,6 @@
-package easy.soc.hacks.frontend.repositories
+package easy.soc.hacks.frontend.repository
 
-import easy.soc.hacks.frontend.domains.CalibrationPoint
+import easy.soc.hacks.frontend.domain.CalibrationPoint
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 

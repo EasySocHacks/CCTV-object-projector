@@ -1,4 +1,4 @@
-package easy.soc.hacks.frontend.components
+package easy.soc.hacks.frontend.component
 
 import org.springframework.stereotype.Component
 import org.springframework.web.socket.CloseStatus

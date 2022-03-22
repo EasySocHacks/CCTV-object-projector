@@ -1,4 +1,4 @@
-package easy.soc.hacks.frontend.interceptors
+package easy.soc.hacks.frontend.interceptor
 
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.web.servlet.HandlerInterceptor
