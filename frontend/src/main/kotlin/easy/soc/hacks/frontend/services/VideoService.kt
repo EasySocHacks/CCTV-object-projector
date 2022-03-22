@@ -1,8 +1,8 @@
-package easy.soc.hacks.frontend.service
+package easy.soc.hacks.frontend.services
 
-import easy.soc.hacks.frontend.domain.Video
-import easy.soc.hacks.frontend.repository.VideoRepository
-import easy.soc.hacks.frontend.service.VideoService.Companion.VideoStatus.STOP
+import easy.soc.hacks.frontend.domains.Video
+import easy.soc.hacks.frontend.repositories.VideoRepository
+import easy.soc.hacks.frontend.services.VideoService.Companion.VideoStatus.STOP
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 

@@ -1,4 +1,4 @@
-package easy.soc.hacks.frontend.domain
+package easy.soc.hacks.frontend.domains
 
 import lombok.Data
 import javax.persistence.*

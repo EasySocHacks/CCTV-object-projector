@@ -1,4 +1,4 @@
-package easy.soc.hacks.frontend.bean
+package easy.soc.hacks.frontend.beans
 
 import org.springframework.context.annotation.Bean
 import org.springframework.web.servlet.LocaleResolver

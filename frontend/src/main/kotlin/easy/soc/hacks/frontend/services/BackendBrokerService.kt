@@ -1,8 +1,8 @@
-package easy.soc.hacks.frontend.service
+package easy.soc.hacks.frontend.services
 
-import easy.soc.hacks.frontend.domain.CalibrationPoint
-import easy.soc.hacks.frontend.domain.CameraVideo
-import easy.soc.hacks.frontend.service.BackendBrokerService.Companion.Command.*
+import easy.soc.hacks.frontend.domains.CalibrationPoint
+import easy.soc.hacks.frontend.domains.CameraVideo
+import easy.soc.hacks.frontend.services.BackendBrokerService.Companion.Command.*
 import org.json.JSONArray
 import org.json.JSONObject
 import org.springframework.stereotype.Service

@@ -1,10 +1,10 @@
 package easy.soc.hacks.frontend.controllers.rest
 
-import easy.soc.hacks.frontend.domain.VideoFragment
-import easy.soc.hacks.frontend.domain.VideoScreenshot
-import easy.soc.hacks.frontend.service.VideoFragmentService
-import easy.soc.hacks.frontend.service.VideoScreenshotService
-import easy.soc.hacks.frontend.service.VideoService
+import easy.soc.hacks.frontend.domains.VideoFragment
+import easy.soc.hacks.frontend.domains.VideoScreenshot
+import easy.soc.hacks.frontend.services.VideoFragmentService
+import easy.soc.hacks.frontend.services.VideoScreenshotService
+import easy.soc.hacks.frontend.services.VideoService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.HttpStatus.NOT_FOUND

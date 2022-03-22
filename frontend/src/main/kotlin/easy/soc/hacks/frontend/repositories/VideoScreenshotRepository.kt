@@ -1,6 +1,6 @@
-package easy.soc.hacks.frontend.repository
+package easy.soc.hacks.frontend.repositories
 
-import easy.soc.hacks.frontend.domain.VideoScreenshot
+import easy.soc.hacks.frontend.domains.VideoScreenshot
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 
