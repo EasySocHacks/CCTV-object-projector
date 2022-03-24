@@ -1,3 +1,7 @@
+#calibrationBody {
+    min-width: 950px;
+}
+
 .calibration-block {
     display: flex;
     justify-content: center;
@@ -48,3 +52,36 @@
     margin-bottom: 20px;
 }
 
+#calibrationScreenshotCanvas {
+    z-index: 1;
+    border: 1px solid black;
+    position: absolute;
+}
+
+#calibrationScreenshotImg {
+    z-index: 0;
+}
+
+#calibrationScreenshotDiv {
+    width: 100%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    position: relative;
+
+    user-select: none;
+}
+
+#calibrationForm {
+    margin-top: 50px;
+}
+
+#calibrationFormScreenTitle {
+    padding-left: 100px;
+}
+
+#calibrationFormRealTitle {
+    padding-right: 190px;
+}

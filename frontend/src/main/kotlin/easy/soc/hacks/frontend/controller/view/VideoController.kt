@@ -1,4 +1,4 @@
-package easy.soc.hacks.frontend.controllers.view
+package easy.soc.hacks.frontend.controller.view
 
 import easy.soc.hacks.frontend.component.BackendWebSocketHandlerComponent.Companion.activeBackendWebSocketSession
 import easy.soc.hacks.frontend.domain.CalibrationPointListWrapper

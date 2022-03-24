@@ -1,4 +1,4 @@
-package easy.soc.hacks.frontend.controllers.rest
+package easy.soc.hacks.frontend.controller.rest
 
 import easy.soc.hacks.frontend.domain.VideoFragment
 import easy.soc.hacks.frontend.domain.VideoScreenshot
@@ -98,8 +98,12 @@ class StreamingController {
     fun getScreenshot(
         @PathVariable("videoId") videoId: Long
     ): ResponseEntity<ByteArray> {
-        return ResponseEntity.ok().body(
-            videoScreenshotService.getVideoScreenshotByVideoId(videoId).get().data
-        )
+        val screenshotOptional = videoScreenshotService.getVideoScreenshotByVideoId(videoId)
+
+        return if (screenshotOptional.isPresent) {
+            ResponseEntity.ok().body(screenshotOptional.get().data)
+        } else {
+            ResponseEntity.status(NOT_FOUND).build()
+        }
     }
 }
