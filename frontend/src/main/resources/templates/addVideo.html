@@ -2,19 +2,22 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>CCTV Video Projector</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 
+    <link rel="stylesheet" href="/css/base.css">
     <link rel="stylesheet" href="/css/videoPreview.css">
 </head>
 <body>
-    <form action="/video/add" method="post">
-        <p th:text="#{video.add.form.name}"></p>
-        <input type="text" name="name">
+<header th:include="header :: template"></header>
 
-        <p th:text="#{video.add.form.url}"></p>
-        <input type="url" name="url">
+<form action="/video/add" method="post">
+    <p th:text="#{video.add.form.name}"></p>
+    <input type="text" name="name">
 
-        <button type="submit" th:text="#{video.add.form.submit}"></button>
-    </form>
+    <p th:text="#{video.add.form.url}"></p>
+    <input type="url" name="url">
+
+    <button type="submit" th:text="#{video.add.form.submit}"></button>
+</form>
 </body>
 </html>

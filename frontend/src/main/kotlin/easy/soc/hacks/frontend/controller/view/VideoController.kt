@@ -27,12 +27,17 @@ class VideoController {
     @Autowired
     private lateinit var calibrationPointService: CalibrationPointService
 
-    @GetMapping("", "video/list/preview")
-    fun previewVideoList(model: Model): String {
+    @GetMapping("")
+    fun index(): String {
+        return "index"
+    }
+
+    @GetMapping("video/preview/camera")
+    fun previewCameraVideo(model: Model): String {
         model.addAttribute("videoList", videoService.findAll())
         model.addAttribute("videoStatus", videoStatus)
 
-        return "index"
+        return "previewCamera"
     }
 
     @GetMapping("video/add")

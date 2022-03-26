@@ -1,0 +1,28 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>CCTV Video Projector</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/previewCamera.css">
+    <link rel="stylesheet" href="/css/videoPreview.css">
+    <link rel="stylesheet" href="/css/mapPreview.css">
+</head>
+<body id="preview">
+<header th:include="header :: template"></header>
+
+<div id="videoPreview" th:include="videoPreview :: template (${videoList})"></div>
+<div id="mapPreview" th:include="mapPreview :: template"></div>
+<div id="previewControls">
+    <th:block th:switch="${videoStatus.toString()}">
+        <form th:case="START" method="post">
+            <button th:id="previewControlStartButton" th:text="STOP"></button>
+        </form>
+        <form th:case="STOP" method="post" action="/video/start">
+            <button th:id="previewControlStopButton" th:text="START"></button>
+        </form>
+    </th:block>
+</div>
+</body>
+</html>

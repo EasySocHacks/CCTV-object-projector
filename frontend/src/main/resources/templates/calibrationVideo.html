@@ -4,10 +4,13 @@
     <title>CCTV Video Projector</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 
+    <link rel="stylesheet" href="/css/base.css">
     <link rel="stylesheet" href="/css/videoPreview.css">
     <link rel="stylesheet" href="/css/calibrationVideo.css">
 </head>
 <body id="calibrationBody">
+<header th:include="header :: template"></header>
+
 <div id="calibrationScreenshotDiv" hidden>
     <canvas id="calibrationScreenshotCanvas"></canvas>
     <img id="calibrationScreenshotImg">
