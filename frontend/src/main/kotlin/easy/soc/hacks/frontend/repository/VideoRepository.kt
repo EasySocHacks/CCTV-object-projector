@@ -7,6 +7,6 @@ import java.util.*
 
 
 @Repository
-interface VideoRepository : JpaRepository<Video, String> {
+interface VideoRepository : JpaRepository<Video, Long> {
     fun getVideoById(id: Long): Optional<out Video>
 }

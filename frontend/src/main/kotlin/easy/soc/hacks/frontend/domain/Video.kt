@@ -4,7 +4,7 @@ import lombok.Data
 import javax.persistence.*
 import javax.persistence.InheritanceType.JOINED
 
-@Table
+@Table(name = "videos")
 @Entity
 @Inheritance(strategy = JOINED)
 @Data
@@ -22,7 +22,7 @@ class Video(
     val calibrationPointList: List<CalibrationPoint> = emptyList()
 )
 
-@Table
+@Table(name = "camera_videos")
 @Entity
 @Data
 class CameraVideo(
@@ -34,7 +34,7 @@ class CameraVideo(
     val url: String
 ) : Video(id, name, calibrationPointList)
 
-@Table
+@Table(name = "file_videos")
 @Entity
 @Data
 class FileVideo(

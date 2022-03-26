@@ -3,7 +3,7 @@ package easy.soc.hacks.frontend.domain
 import lombok.Data
 import javax.persistence.*
 
-@Table
+@Table(name = "video_fragments")
 @Entity
 @Data
 class VideoFragment(

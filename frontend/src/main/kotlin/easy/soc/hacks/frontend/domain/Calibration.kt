@@ -5,8 +5,8 @@ import javax.persistence.*
 import javax.persistence.GenerationType.IDENTITY
 
 
+@Table(name = "calibration_points")
 @Entity
-@Table
 @Data
 class CalibrationPoint(
     @Id
