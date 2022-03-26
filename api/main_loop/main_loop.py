@@ -1,6 +1,7 @@
 import random
 
 import cv2
+import requests
 from torch.multiprocessing import get_logger, Process, Manager
 
 from exception import EndOfVideoException
@@ -83,7 +84,21 @@ class MainLoop:
             "height": capture.get(cv2.CAP_PROP_FRAME_HEIGHT),
         }
 
+        _, frame = capture.read()
+        self._send_screenshot(video_id, frame)
+
         capture.release()
+
+    def _send_screenshot(self, video_id, frame):
+        self._logger.debug("Sending screenshot of video with id '{}'".format(video_id))
+
+        requests.post("{}://{}:{}/api/v{}/video/{}/screenshot".format(
+            self.config.method,
+            self.config.host,
+            self.config.port,
+            self.config.api_version,
+            video_id
+        ), data=cv2.imencode(".jpg", frame)[1].tobytes())
 
     def _loop(self, video_processor_queue_list):
         self._logger.info("MainLoop start collecting frames")
@@ -112,6 +127,9 @@ class MainLoop:
                     frame = frame_collector_dict[video_id].get_next()
 
                     batches[video_id].append((iteration_id, frame))
+
+                    if iteration_id % self.config.screenshot_stride == 0:
+                        self._send_screenshot(video_id, frame)
 
                     progress = True
                 except EndOfVideoException:

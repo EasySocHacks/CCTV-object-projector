@@ -21,3 +21,5 @@ class Config:
         self.detection_threshold = 0.65
 
         self.bbox_expander_type = None
+
+        self.screenshot_stride = 1800
