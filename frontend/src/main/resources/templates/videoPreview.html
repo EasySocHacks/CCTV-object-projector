@@ -1,30 +1,39 @@
 <html xmlns:th="http://www.thymeleaf.org">
-<div th:fragment="template (videoList)">
-    <div class="videoPreviewBlock" th:each="video : ${videoList}">
-        <p th:text="${video.name}" style="height: 20px">Video Stream ID</p>
-        <div class="videoBlock" th:include=":: videoBlock (${video.id})"></div>
-        <a class="calibration-required-notice"
-           th:if="${video.calibrationPointList.isEmpty()}"
-           th:text="#{video.preview.calibration.required}"
-           th:href="'/video/' + ${video.id} + '/calibration/'">
-        </a>
+<th:block th:fragment="template">
+    <div id="videoPreview">
+        <!--/*@thymesVar id="currentSession" type="easy.soc.hacks.frontend.domain.Session"*/-->
+        <!--/*@thymesVar id="videoList" type="java.util.List<easy.soc.hacks.frontend.domain.Video>"*/-->
+
+        <div class="videoPreviewBlock" th:each="video : ${videoList}">
+            <p th:text="${video.name}" style="height: 20px">Video Stream ID</p>
+            <th:block th:include=":: videoBlock (${video.id})"></th:block>
+            <a class="calibration-required-notice"
+               th:if="${video.calibrationPointList.isEmpty()}"
+               th:text="#{video.preview.calibration.required}"
+               th:href="'/video/calibration/?id=' + ${video.id}">
+            </a>
+        </div>
+
+        <form th:action="'/video/add'" method="get">
+            <input type="hidden" name="type" th:value="${param.get('type')}">
+            <button class="addVideoButton" type="submit">+</button>
+        </form>
+        <th:block th:include=":: playVideoScript (${videoList})"></th:block>
     </div>
-    <form action="/video/add" method="get">
-        <button id="addVideoButton" type="submit">+</button>
-    </form>
-    <div th:include=":: playVideoScript (${videoList})"></div>
-</div>
+</th:block>
 
-<div th:fragment="videoBlock (videoId)">
-    <video th:id="'video' + ${videoId}" class="video" muted="muted" autoplay="autoplay"></video>
-</div>
+<th:block th:fragment="videoBlock (videoId)">
+    <div class="videoBlock">
+        <video th:id="'video' + ${videoId}" class="video" muted="muted" autoplay="autoplay"></video>
+    </div>
+</th:block>
 
-<div th:fragment="drawableVideoBlock (videoId)">
+<th:block th:fragment="drawableVideoBlock (videoId)">
     <video th:id="'video' + ${videoId}" class="video" muted="muted" autoplay="autoplay"></video>
     <canvas class="draw-over-video-canvas"></canvas>
-</div>
+</th:block>
 
-<div th:fragment="playVideoScript (vidoeList)">
+<th:block th:fragment="playVideoScript (vidoeList)">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script th:inline="javascript">
         /*<![CDATA[*/
@@ -46,7 +55,7 @@
                 let hls = new Hls();
 
                 hls.attachMedia(video);
-                hls.loadSource("/api/v1/video/" + videoId + "/manifest");
+                hls.loadSource("/api/v1/video/manifest?id=" + videoId);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     video.play();
                 });
@@ -54,4 +63,4 @@
         }
         /*]]>*/
     </script>
-</div>
+</th:block>

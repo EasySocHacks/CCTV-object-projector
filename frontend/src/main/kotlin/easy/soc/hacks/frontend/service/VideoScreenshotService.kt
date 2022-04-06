@@ -1,5 +1,6 @@
 package easy.soc.hacks.frontend.service
 
+import easy.soc.hacks.frontend.domain.Video
 import easy.soc.hacks.frontend.domain.VideoScreenshot
 import easy.soc.hacks.frontend.repository.VideoScreenshotRepository
 import org.springframework.beans.factory.annotation.Autowired
@@ -10,7 +11,15 @@ class VideoScreenshotService {
     @Autowired
     private lateinit var videoScreenshotRepository: VideoScreenshotRepository
 
-    fun save(videoScreenshot: VideoScreenshot) = videoScreenshotRepository.save(videoScreenshot)
+    fun save(videoScreenshot: VideoScreenshot): VideoScreenshot {
+        videoScreenshotRepository.save(
+            videoId = videoScreenshot.video.id,
+            data = videoScreenshot.data,
+            sessionId = videoScreenshot.video.session.id
+        )
 
-    fun getVideoScreenshotByVideoId(videoId: Long) = videoScreenshotRepository.findById(videoId)
+        return findVideoScreenshotByVideo(videoScreenshot.video).get()
+    }
+
+    fun findVideoScreenshotByVideo(video: Video) = videoScreenshotRepository.findVideoScreenshotByVideo(video)
 }

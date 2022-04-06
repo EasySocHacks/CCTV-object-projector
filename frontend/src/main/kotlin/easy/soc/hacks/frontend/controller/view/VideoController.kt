@@ -1,20 +1,22 @@
 package easy.soc.hacks.frontend.controller.view
 
+import easy.soc.hacks.frontend.annotation.ModelHolder
 import easy.soc.hacks.frontend.component.BackendWebSocketHandlerComponent.Companion.activeBackendWebSocketSession
-import easy.soc.hacks.frontend.domain.CalibrationPointListWrapper
-import easy.soc.hacks.frontend.domain.CameraVideo
-import easy.soc.hacks.frontend.service.BackendBrokerService
-import easy.soc.hacks.frontend.service.CalibrationPointService
-import easy.soc.hacks.frontend.service.VideoService
-import easy.soc.hacks.frontend.service.VideoService.Companion.videoStatus
+import easy.soc.hacks.frontend.domain.*
+import easy.soc.hacks.frontend.domain.MessageType.ERROR
+import easy.soc.hacks.frontend.domain.MessageType.WARNING
+import easy.soc.hacks.frontend.domain.SessionStatusType.*
+import easy.soc.hacks.frontend.service.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
-import org.springframework.ui.set
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.ModelAttribute
-import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestParam
+import java.util.concurrent.ConcurrentSkipListSet
+import java.util.concurrent.atomic.AtomicLong
+import javax.servlet.http.HttpSession
 
 @Controller
 class VideoController {
@@ -25,75 +27,334 @@ class VideoController {
     private lateinit var videoService: VideoService
 
     @Autowired
+    private lateinit var videoFragmentService: VideoFragmentService
+
+    @Autowired
     private lateinit var calibrationPointService: CalibrationPointService
 
+    @Autowired
+    private lateinit var sessionService: SessionService
+
+    @Autowired
+    private lateinit var messageService: MessageService
+
     @GetMapping("")
+    @ModelHolder
     fun index(): String {
         return "index"
     }
 
-    @GetMapping("video/preview/camera")
-    fun previewCameraVideo(model: Model): String {
-        model.addAttribute("videoList", videoService.findAll())
-        model.addAttribute("videoStatus", videoStatus)
+    @GetMapping("video/preview")
+    @ModelHolder
+    fun previewCameraVideo(
+        @RequestParam("type") streamingType: StreamingType,
+        @RequestParam("session") sessionId: String?,
+        model: Model,
+        httpSession: HttpSession
+    ): String {
+        val session = when (sessionId) {
+            null ->
+                sessionService.getActiveOrStreamingSession()
+            else ->
+                sessionService.findSessionById(sessionId)
+        }.orElseGet { null }
 
-        return "previewCamera"
+        if (session != null) {
+            if (session.streamingType == streamingType) {
+                val maxVideoFragmentId =
+                    videoFragmentService.getMaxVideoFragmentIdBySessionId(
+                        sessionId = session.id
+                    ).orElseGet { null }
+
+                httpSession.setAttribute(
+                    "nextBatchId",
+                    when (maxVideoFragmentId) {
+                        null -> AtomicLong(0)
+                        else -> AtomicLong(maxVideoFragmentId)
+                    }
+                )
+
+                httpSession.setAttribute(
+                    "processedVideoFragmentIdSet",
+                    ConcurrentSkipListSet<VideoFragmentId>()
+                )
+                httpSession.setAttribute(
+                    "processedMapBatchIdSet",
+                    ConcurrentSkipListSet<Long>()
+                )
+
+                model.addAttribute(
+                    "videoList",
+                    videoService.findVideosBySessionId(session.id)
+                )
+            } else {
+                messageService.sendMessage(
+                    httpSession,
+                    "message.unmatched.streaming.type",
+                    ERROR
+                )
+            }
+
+            model.addAttribute(
+                "currentSession",
+                session
+            )
+        } else {
+            if (sessionId != null) {
+                messageService.sendMessage(
+                    httpSession,
+                    "message.session.doesnt.exist",
+                    ERROR
+                )
+            }
+        }
+
+        return "preview"
     }
 
     @GetMapping("video/add")
-    fun addVideoGet(): String {
+    @ModelHolder
+    fun addVideoGet(
+        @RequestParam("type") streamingType: StreamingType,
+        httpSession: HttpSession
+    ): String {
+        if (!messageService.isAccessGranted(
+                httpSession = httpSession,
+                streamingType = streamingType
+            )
+        ) {
+            return "redirect:/"
+        }
+
         return "addVideo"
     }
 
     @PostMapping("video/add")
-    fun addVideoPost(@ModelAttribute cameraVideo: CameraVideo): String {
-        val savedVideo = videoService.save(cameraVideo) as CameraVideo
-        backendBrokerService.appendCameraVideo(activeBackendWebSocketSession!!, savedVideo)
+    fun addVideo(
+        @RequestParam("type") streamingType: StreamingType,
+        @RequestParam("name") name: String,
+        @RequestParam("uri") uri: String,
+        httpSession: HttpSession
+    ): String {
+        if (!messageService.isAccessGranted(
+                httpSession = httpSession,
+                streamingType = streamingType
+            )
+        ) {
+            return "redirect:/"
+        }
 
-        return "redirect:/"
+        if (activeBackendWebSocketSession == null) {
+            messageService.sendMessage(
+                httpSession,
+                "message.backend.is.disable",
+                ERROR
+            )
+
+            return "redirect:/video/preview?type=${streamingType.value}"
+        }
+
+        val session = sessionService.getActiveSession().orElseGet { null }
+
+        if (session != null) {
+            val savedVideo = videoService.save(
+                Video(
+                    session = session,
+                    name = name,
+                    uri = uri,
+                    streamingType = streamingType
+                )
+            )
+
+            backendBrokerService.appendVideo(activeBackendWebSocketSession, savedVideo)
+        }
+
+        return "redirect:/video/preview?type=${streamingType.value}"
     }
 
-    @GetMapping("video/{videoId}/calibration")
-    fun calibrationVideo(@PathVariable("videoId") videoId: Long, model: Model): String {
-        val video = videoService.getVideoById(videoId).get()
+    @GetMapping("video/calibration")
+    @ModelHolder
+    fun calibrationVideo(
+        @RequestParam("id") videoId: Long,
+        model: Model,
+        httpSession: HttpSession
+    ): String {
+        val video = videoService.findVideoById(
+            id = videoId
+        ).orElseGet { null }
 
-        model["video"] = video
+        if (video == null) {
+            messageService.sendMessage(
+                httpSession,
+                "message.video.not.found",
+                ERROR
+            )
+
+            return "redirect:/"
+        }
+
+        if (!messageService.isAccessGranted(
+                httpSession = httpSession,
+                video = video
+            )
+        ) {
+            return "redirect:/"
+        }
+
+        if (video.session.status == DONE) {
+            messageService.sendMessage(
+                httpSession,
+                "message.video.calibration.edit.done.session",
+                ERROR
+            )
+
+            return "redirect:/video/preview?type=${video.streamingType.value}&session=${video.session.id}"
+        }
+
+        model.addAttribute("video", video)
 
         return "calibrationVideo"
     }
 
-    @PostMapping("video/{videoId}/calibration/save")
+    @PostMapping("video/calibration/save")
     fun saveCalibration(
-        @PathVariable("videoId") videoId: Long,
-        @ModelAttribute calibrationPointListWrapper: CalibrationPointListWrapper
+        @RequestParam("id") videoId: Long,
+        @ModelAttribute calibrationPointListWrapper: CalibrationPointListWrapper,
+        httpSession: HttpSession
     ): String {
-        // TODO: Change CameraVideo to Video inheritance
-        with(videoService.getVideoById(videoId).get() as CameraVideo) {
-            videoService.save(
-                CameraVideo(
-                    id = id,
-                    name = name,
-                    calibrationPointList = calibrationPointListWrapper.toCalibrationPointList().map {
-                        calibrationPointService.save(it)
-                    },
-                    url = url
-                )
+        val video = videoService.findVideoById(videoId).orElseGet { null }
+
+        if (video == null) {
+            messageService.sendMessage(
+                httpSession,
+                "message.video.not.found",
+                ERROR
             )
+
+            return "redirect:/"
         }
 
-        backendBrokerService.computeCalibrationMatrix(
-            activeBackendWebSocketSession!!,
-            videoId,
-            calibrationPointListWrapper.toCalibrationPointList()
+        if (!messageService.isAccessGranted(
+                httpSession = httpSession,
+                video = video
+            )
+        ) {
+            return "redirect:/"
+        }
+
+        val calibrationPointList = calibrationPointListWrapper.toCalibrationPointList().map {
+            calibrationPointService.save(it)
+        }
+
+        val updateVideo = Video(
+            id = video.id,
+            session = video.session,
+            name = video.name,
+            calibrationPointList = calibrationPointList,
+            uri = video.uri,
+            streamingType = video.streamingType
+        )
+        videoService.setCalibration(updateVideo)
+
+        backendBrokerService.setCalibration(
+            activeBackendWebSocketSession,
+            updateVideo
         )
 
-        return "redirect:/"
+        return "redirect:/video/preview?type=${video.streamingType.value}"
     }
 
-    @PostMapping("video/start")
-    fun startVideoStream(): String {
-        backendBrokerService.startProcessingVideo(activeBackendWebSocketSession!!)
+    @PostMapping("start")
+    fun startVideoStream(
+        httpSession: HttpSession
+    ): String {
+        if (!messageService.isAccessGranted(
+                httpSession = httpSession
+            )
+        ) {
+            return "redirect:/"
+        }
 
-        return "redirect:/"
+        val session = sessionService.getActiveSession().orElseGet { null }
+        val videoList = videoService.findVideosBySessionId(session.id)
+
+        if (videoList.isEmpty()) {
+            messageService.sendMessage(
+                httpSession,
+                "message.start.streaming.with.empty.video.list",
+                WARNING
+            )
+
+            return "redirect:/video/preview?type=${session.streamingType.value}"
+        }
+
+        if (activeBackendWebSocketSession == null) {
+            messageService.sendMessage(
+                httpSession,
+                "message.backend.is.disable",
+                ERROR
+            )
+
+            return "redirect:/video/preview?type=${session.streamingType.value}"
+        }
+
+        backendBrokerService.startStreaming(activeBackendWebSocketSession)
+
+        sessionService.save(
+            Session(
+                id = session.id,
+                startTime = session.startTime,
+                status = STREAMING,
+                streamingType = session.streamingType
+            )
+        )
+
+        return "redirect:/video/preview?type=${session.streamingType.value}"
+    }
+
+    @PostMapping("session/create")
+    fun createSession(
+        @RequestParam("type") streamingType: StreamingType,
+        httpSession: HttpSession
+    ): String {
+        if (activeBackendWebSocketSession == null) {
+            messageService.sendMessage(
+                httpSession,
+                "message.backend.is.disable",
+                ERROR
+            )
+
+            return "redirect:/"
+        }
+
+        return when (sessionService.getActiveSession().orElseGet { null }) {
+            null -> {
+                val session = sessionService.save(
+                    Session(
+                        status = ACTIVE,
+                        streamingType = streamingType
+                    )
+                )
+
+                backendBrokerService.startSession(
+                    activeBackendWebSocketSession,
+                    session
+                )
+
+                "redirect:/video/preview?type=${streamingType.value}&session=${
+                    session.id
+                }"
+            }
+
+            else -> {
+                messageService.sendMessage(
+                    httpSession,
+                    "message.session.create",
+                    ERROR
+                )
+
+                "redirect:/video/preview?type=${streamingType.value}"
+            }
+        }
     }
 }

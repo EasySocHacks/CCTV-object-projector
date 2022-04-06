@@ -13,6 +13,20 @@ header {
     align-items: flex-end;
 }
 
+button {
+    margin: 50px;
+    width: 150px;
+    height: 30px;
+    border-radius: 10px;
+    box-shadow: 4px 2.5px;
+    cursor: pointer;
+}
+
+h1 {
+    width: 100%;
+    text-align: center;
+}
+
 #headerNavigatorDiv {
     padding: 10px 10px 0 0;
     width: 100%;
@@ -75,4 +89,51 @@ header {
 .headerUserElement {
     margin-left: 10px;
     margin-right: 10px;
+}
+
+#messageDiv {
+    width: 100%;
+    bottom: 0;
+    right: 0;
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+@keyframes messageBlockAnimation {
+    0% {opacity: 0.0}
+    10% {opacity: 1.0}
+    70% {opacity: 1.0}
+    85% {opacity: 0.5}
+    100% {opacity: 0.0}
+}
+
+.messageBlock {
+    border: 1px solid black;
+    width: 400px;
+    margin: 10px;
+    box-shadow: 2px 2px;
+    border-radius: 5px;
+    font-family: monospace;
+
+    animation: messageBlockAnimation 10.0s forwards;
+    -webkit-animation: messageBlockAnimation 10.0s forwards;
+}
+
+.messageBlock:hover {
+    animation-name: none;
+}
+
+.messageBlockTitle {
+    padding: 10px;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.messageBlockMessage {
+    padding: 10px;
+    border-top: 1px solid black;
 }

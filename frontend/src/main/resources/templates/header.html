@@ -1,27 +1,29 @@
 <html xmlns:th="http://www.thymeleaf.org">
 
-<header th:fragment="template">
-    <div id="headerNavigatorDiv">
-        <div class="headerNavigatorVideoDropbox">
-            <div class="headerNavigatorElementDiv headerNavigatorVideoElement"
-                 th:text="#{header.navigator.video}"></div>
-            <div class="headerNavigatorVideoDropboxContext">
-                <a href="/video/preview/camera" class="headerNavigatorVideoDropboxContextElement"
-                   th:text="#{header.navigator.video.camera}"></a>
+<th:block th:fragment="template">
+    <header>
+        <div id="headerNavigatorDiv">
+            <div class="headerNavigatorVideoDropbox">
+                <div class="headerNavigatorElementDiv headerNavigatorVideoElement"
+                     th:text="#{header.navigator.video}"></div>
+                <div class="headerNavigatorVideoDropboxContext">
+                    <a href="/video/preview?type=camera" class="headerNavigatorVideoDropboxContextElement"
+                       th:text="#{header.navigator.video.camera}"></a>
 
-                <a href="/video/preview/file" class="headerNavigatorVideoDropboxContextElement"
-                   th:text="#{header.navigator.video.file}"></a>
+                    <a href="/video/preview?type=file" class="headerNavigatorVideoDropboxContextElement"
+                       th:text="#{header.navigator.video.file}"></a>
 
-                <a href="/video/preview/record" class="headerNavigatorVideoDropboxContextElement"
-                   th:text="#{header.navigator.video.record}"></a>
+                    <a href="/video/preview?type=record" class="headerNavigatorVideoDropboxContextElement"
+                       th:text="#{header.navigator.video.record}"></a>
+                </div>
             </div>
         </div>
-    </div>
-    <div id="headerUserDiv">
-        <div class="headerUserElement" th:text="${user.login}"></div>
-        <div>|</div>
-        <div>
-            <a href="/logout" class="headerUserElement" th:text="#{header.user.logout}"></a>
+        <div id="headerUserDiv">
+            <!--        <div class="headerUserElement" th:text="${user.login}"></div>-->
+            <div>|</div>
+            <div>
+                <a href="/logout" class="headerUserElement" th:text="#{header.user.logout}"></a>
+            </div>
         </div>
-    </div>
-</header>
+    </header>
+</th:block>

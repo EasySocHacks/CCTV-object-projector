@@ -8,10 +8,11 @@
     <link rel="stylesheet" href="/css/index.css">
 </head>
 <body id="preview">
-<header th:include="header :: template"></header>
+<th:block th:include="header :: template"></th:block>
 
 <h1 id="indexTitle">
     CCTV Object Projector
 </h1>
+<th:block th:include="message :: template"></th:block>
 </body>
 </html>

@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/css/calibrationVideo.css">
 </head>
 <body id="calibrationBody">
-<header th:include="header :: template"></header>
+<th:block th:include="header :: template"></th:block>
 
 <div id="calibrationScreenshotDiv" hidden>
     <canvas id="calibrationScreenshotCanvas"></canvas>
@@ -22,7 +22,9 @@
     <label for="settingRangeInput"></label>
     <input id="settingRangeInput" type="range" min="4" max="20" value="10">
 </div>
-<form id="calibrationForm" th:action="'/video/' + ${video.id} + '/calibration/save'" method="post">
+<form id="calibrationForm" th:action="'/video/calibration/save'" method="post">
+    <input type="hidden" name="id" th:value="${video.id}">
+
     <div class="pointsHeader">
         <div id="calibrationFormScreenTitle" th:text="#{video.calibration.screen}"></div>
         <div id="calibrationFormRealTitle" th:text="#{video.calibration.real}"></div>
@@ -76,8 +78,11 @@
             </div>
         </div>
     </div>
-    <button type="submit" th:text="#{video.calibration.save}"></button>
+    <div class="submitDiv">
+        <button type="submit" th:text="#{video.calibration.save}"></button>
+    </div>
 </form>
+<th:block th:include="message :: template"></th:block>
 <script type="application/javascript" th:inline="javascript">
     /*<![CDATA[*/
     const canvas = document.getElementById("calibrationScreenshotCanvas")
@@ -193,7 +198,7 @@
 
     function requestScreenshot(onload) {
         const screenshotXHR = new XMLHttpRequest()
-        screenshotXHR.open("GET", "/api/v1/video/" + [[${video.id}]] + "/screenshot")
+        screenshotXHR.open("GET", "/api/v1/video/screenshot?id=" + [[${video.id}]])
         screenshotXHR.responseType = "blob"
         screenshotXHR.onload = onload
         screenshotXHR.send()

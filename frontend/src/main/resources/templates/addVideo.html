@@ -5,19 +5,35 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 
     <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/addVideo.css">
     <link rel="stylesheet" href="/css/videoPreview.css">
 </head>
 <body>
-<header th:include="header :: template"></header>
+<th:block th:include="header :: template"></th:block>
 
-<form action="/video/add" method="post">
-    <p th:text="#{video.add.form.name}"></p>
-    <input type="text" name="name">
+<th:block th:switch="${activeSession}">
+    <th:block th:case="null">
+        <h1 th:text="#{message.session.doesnt.exist.title}"></h1>
+    </th:block>
+    <th:block th:case="*">
+        <div id="addVideoDiv">
+            <form id="addVideoForm" action="/video/add" method="post">
+                <input type="hidden" name="type" th:value="${param.get('type')}">
 
-    <p th:text="#{video.add.form.url}"></p>
-    <input type="url" name="url">
+                <div class="addVideoFormBlock">
+                    <label for="addVideoName" th:text="#{video.add.form.name}"></label>
+                    <input id="addVideoName" type="text" name="name">
+                </div>
 
-    <button type="submit" th:text="#{video.add.form.submit}"></button>
-</form>
+                <div class="addVideoFormBlock">
+                    <label for="addVideoUri" th:text="#{video.add.form.uri}"></label>
+                    <input id="addVideoUri" type="url" name="uri">
+                </div>
+                <button type="submit" th:text="#{video.add.form.submit}"></button>
+            </form>
+        </div>
+    </th:block>
+</th:block>
+<th:block th:include="message :: template"></th:block>
 </body>
 </html>

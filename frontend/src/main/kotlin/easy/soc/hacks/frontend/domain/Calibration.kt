@@ -11,22 +11,22 @@ import javax.persistence.GenerationType.IDENTITY
 class CalibrationPoint(
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    @Column(nullable = false)
-    val id: Long? = null,
+    @Column(name = "id", nullable = false)
+    val id: Long = 0,
 
-    @Column(nullable = false)
+    @Column(name = "x_screen", nullable = false)
     val xScreen: Double,
 
-    @Column(nullable = false)
+    @Column(name = "y_screen", nullable = false)
     val yScreen: Double,
 
-    @Column(nullable = false)
+    @Column(name = "x_world", nullable = false)
     val xWorld: Double,
 
-    @Column(nullable = false)
+    @Column(name = "y_world", nullable = false)
     val yWorld: Double,
 
-    @Column(nullable = false)
+    @Column(name = "z_world", nullable = false)
     val zWorld: Double
 )
 

@@ -5,30 +5,95 @@ import easy.soc.hacks.frontend.domain.VideoFragment
 import easy.soc.hacks.frontend.repository.VideoFragmentRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import org.springframework.util.ResourceUtils
+import java.util.*
 
 @Service
 class VideoFragmentService {
     @Autowired
     private lateinit var videoFragmentRepository: VideoFragmentRepository
 
-    fun save(videoFragment: VideoFragment) = videoFragmentRepository.save(videoFragment)
+    fun save(videoFragment: VideoFragment): VideoFragment {
+        videoFragmentRepository.save(
+            id = videoFragment.id,
+            sessionId = videoFragment.video.session.id,
+            videoId = videoFragment.video.id,
+            data = videoFragment.data,
+            duration = videoFragment.duration
+        )
 
-    fun getLatestManifest(video: Video): ByteArray {
-        val videoFragments = videoFragmentRepository.getTop2ByVideoOrderByIdDesc(video).reversed()
+        return videoFragment
+    }
+
+    fun findVideoFragmentsByVideoIdAndSessionIdAndVideoFragmentIdRange(
+        videoId: Long,
+        sessionId: String,
+        toId: Long,
+        maxRange: Long
+    ): ByteArray {
+        val ids = mutableListOf<Long>()
+        val durations = mutableListOf<Double>()
+
+        videoFragmentRepository.findVideoFragmentsByVideoIdAndSessionIdAndVideoFragmentIdRange(
+            videoId,
+            sessionId,
+            toId,
+            maxRange
+        ).apply {
+            ids.addAll(this.map { it.id })
+            durations.addAll(this.map { it.duration })
+        }
+
+        if (toId - maxRange + 1 <= 0L) {
+            ids.add(0)
+            durations.add(0.0)
+        }
+
         val manifestTextStringBuffer = StringBuilder()
 
         manifestTextStringBuffer.append("#EXTM3U\n")
         manifestTextStringBuffer.append("#EXT-X-VERSION:3\n")
-        manifestTextStringBuffer.append("#EXT-X-MEDIA-SEQUENCE:${videoFragments[0].id}\n")
+        manifestTextStringBuffer.append("#EXT-X-MEDIA-SEQUENCE:${ids[0]}\n")
         manifestTextStringBuffer.append("#EXT-X-TARGETDURATION:5\n")
-        manifestTextStringBuffer.append(
-            videoFragments.joinToString(separator = "\n") {
-                "#EXTINF:${it.duration},\nfragment/${it.id}"
-            }
-        )
+        for (i in 0 until ids.size) {
+            manifestTextStringBuffer.append(
+                "#EXTINF:${durations[i]},\n/api/v1/video/fragment?id=$videoId&fragment=${ids[i]}\n"
+            )
+        }
 
         return manifestTextStringBuffer.toString().toByteArray()
     }
 
-    fun getVideoFragment(video: Video, id: Long) = videoFragmentRepository.getVideoFragmentByVideoAndId(video, id)
+    fun getManifestByVideoIdAndSessionIdAndNextBatchId(
+        videoId: Long,
+        sessionId: String,
+        nextBatchId: Long
+    ) = findVideoFragmentsByVideoIdAndSessionIdAndVideoFragmentIdRange(
+        videoId,
+        sessionId,
+        nextBatchId,
+        2
+    )
+
+    fun findVideoFragment(id: Long, video: Video): Optional<VideoFragment> {
+        return when (id) {
+            0L ->
+                Optional.of(
+                    VideoFragment(
+                        id = 0,
+                        video = video,
+                        duration = 0.0,
+                        data = ResourceUtils.getFile("classpath:media/video/zeroFragment.ts").readBytes()
+                    )
+                )
+
+            else ->
+                videoFragmentRepository.findVideoFragmentByIdAndVideo(id, video)
+        }
+    }
+
+
+    fun getMaxVideoFragmentIdBySessionId(sessionId: String) =
+        videoFragmentRepository.getMaxVideoFragmentIdBySessionId(sessionId).map { it - 1 }
 }
+

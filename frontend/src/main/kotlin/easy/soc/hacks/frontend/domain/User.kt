@@ -13,15 +13,16 @@ import kotlin.text.Charsets.UTF_8
 @Data
 class User(
     @Id
-    @Column(nullable = false)
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
+    @Column(name = "id", nullable = false)
+    @GeneratedValue(strategy = GenerationType.IDENTITY, generator = "users_id_seq")
+    @SequenceGenerator(name = "users_id_seq", initialValue = 1)
+    val id: Long = 0,
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "login", nullable = false, unique = true)
     val login: String,
 
-    @Enumerated(EnumType.ORDINAL)
-    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
     val role: UserRole = VIEWER
 ) {
     companion object {
@@ -33,7 +34,7 @@ class User(
         }
     }
 
-    @Column(nullable = false)
+    @Column(name = "salt", nullable = false)
     val salt: ByteArray = run {
         val saltBytes = ByteArray(128)
         val secureRandom = SecureRandom()
@@ -41,7 +42,7 @@ class User(
         saltBytes
     }
 
-    @get:Column(nullable = false)
+    @get:Column(name = "password", nullable = false)
     var password: String? = null
         set(password) {
             field = password?.let { encryptPassword(it, salt) }

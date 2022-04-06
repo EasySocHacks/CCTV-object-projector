@@ -1,53 +1,72 @@
 <html xmlns:th="http://www.thymeleaf.org">
-<div th:fragment="template">
+<th:block th:fragment="template">
+    <!--/*@thymesVar id="currentSession" type="easy.soc.hacks.frontend.domain.Session"*/-->
+
     <canvas id="mapCanvas">
 
     </canvas>
-    <script th:include=":: collectAndShowMapScript"></script>
-</div>
+    <th:block th:include=":: collectAndShowMapScript"></th:block>
+</th:block>
 
-<script th:fragment="collectAndShowMapScript">
-    const canvas = document.getElementById("mapCanvas")
-    const width = canvas.width
-    const height = canvas.height
+<th:block th:fragment="collectAndShowMapScript">
+    <script th:inline="javascript">
+        const canvas = document.getElementById("mapCanvas")
+        const width = canvas.width
+        const height = canvas.height
 
-    const context = canvas.getContext("2d")
+        const context = canvas.getContext("2d")
 
-    draw()
-
-    async function draw() {
-        const points = new Map()
-        const pointCount = 10
-
-        while (true) {
-            context.clearRect(0, 0, width, height)
-
-            for (let i = 0; i < pointCount; i++) {
-                if (!points.has(i)) {
-                    points.set(i, [Math.random() * width, Math.random() * height, Math.random() * 2 - 1, Math.random() * 2 - 1])
-                } else {
-                    [x, y, vx, vy] = points.get(i)
-
-                    x += vx
-                    y += vy
-
-                    if (x < -10 || x > width + 10 || y < -10 || y > height + 10) {
-                        x = width - x
-                        y = height - y
-                    }
-
-                    points.set(i, [x, y, vx, vy])
-                }
+        function requestProjection() {
+            const loadingGifXHR = new XMLHttpRequest()
+            loadingGifXHR.open("GET", "/api/v1/session/projection")
+            loadingGifXHR.onload = (event) => {
+                console.log(event.target.response)
             }
 
-            for (let i = 0; i < pointCount; i++) {
-                context.beginPath();
-                [x, y, vx, vy] = points.get(i)
-                context.arc(x, y, 2, 0, 2 * Math.PI)
-                context.stroke()
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 1000 / 30))
+            loadingGifXHR.send()
         }
-    }
-</script>
+
+        setInterval(
+            requestProjection,
+            1000
+        )
+
+        // draw()
+        //
+        // async function draw() {
+        //     const points = new Map()
+        //     const pointCount = 10
+        //
+        //     while (true) {
+        //         context.clearRect(0, 0, width, height)
+        //
+        //         for (let i = 0; i < pointCount; i++) {
+        //             if (!points.has(i)) {
+        //                 points.set(i, [Math.random() * width, Math.random() * height, Math.random() * 2 - 1, Math.random() * 2 - 1])
+        //             } else {
+        //                 [x, y, vx, vy] = points.get(i)
+        //
+        //                 x += vx
+        //                 y += vy
+        //
+        //                 if (x < -10 || x > width + 10 || y < -10 || y > height + 10) {
+        //                     x = width - x
+        //                     y = height - y
+        //                 }
+        //
+        //                 points.set(i, [x, y, vx, vy])
+        //             }
+        //         }
+        //
+        //         for (let i = 0; i < pointCount; i++) {
+        //             context.beginPath();
+        //             [x, y, vx, vy] = points.get(i)
+        //             context.arc(x, y, 2, 0, 2 * Math.PI)
+        //             context.stroke()
+        //         }
+        //
+        //         await new Promise(resolve => setTimeout(resolve, 1000 / 30))
+        //     }
+        // }
+    </script>
+</th:block>

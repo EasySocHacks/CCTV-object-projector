@@ -1,10 +1,10 @@
 package easy.soc.hacks.frontend.service
 
-import easy.soc.hacks.frontend.domain.CalibrationPoint
-import easy.soc.hacks.frontend.domain.CameraVideo
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ArrayNode
+import easy.soc.hacks.frontend.domain.Session
+import easy.soc.hacks.frontend.domain.Video
 import easy.soc.hacks.frontend.service.BackendBrokerService.Companion.Command.*
-import org.json.JSONArray
-import org.json.JSONObject
 import org.springframework.stereotype.Service
 import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
@@ -13,50 +13,92 @@ import org.springframework.web.socket.WebSocketSession
 class BackendBrokerService {
     companion object {
         enum class Command(
-            private val text: String
+            val command: String
         ) {
-            APPEND_CAMERA_VIDEO("APPEND_CAMERA_VIDEO"),
-            COMPUTE_CALIBRATION_MATRIX("COMPUTE_CALIBRATION_MATRIX"),
-            START_PROCESSING_VIDEO("START_PROCESSING_VIDEO");
+            START_SESSION("START_SESSION"),
+            APPEND_VIDEO("APPEND_VIDEO"),
+            SET_CALIBRATION("SET_CALIBRATION"),
+            START_STREAMING("START_STREAMING");
 
-            override fun toString(): String = text
+            override fun toString(): String = command
         }
     }
 
-    fun appendCameraVideo(webSocketSession: WebSocketSession, cameraVideo: CameraVideo) {
-        val json = JSONObject()
-        json.put("command", APPEND_CAMERA_VIDEO.toString())
-        json.put("url", cameraVideo.url)
-        json.put("id", cameraVideo.id)
-        webSocketSession.sendMessage(TextMessage(json.toString()))
+    fun startSession(webSocketSession: WebSocketSession?, session: Session) {
+        val objectMapper = ObjectMapper()
+        val command = objectMapper.createObjectNode()
+
+        command.put("command", START_SESSION.command)
+        command.put("sessionId", session.id)
+
+        webSocketSession?.sendMessage(
+            TextMessage(
+                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(command)
+            )
+        )
     }
 
-    fun computeCalibrationMatrix(webSocketSession: WebSocketSession, videoId: Long, calibrationPointList: List<CalibrationPoint>) {
-        val json = JSONObject()
-        json.put("command", COMPUTE_CALIBRATION_MATRIX.toString())
-        json.put("videoId", videoId)
-        val calibrationPointJsonArray = JSONArray()
+    fun appendVideo(webSocketSession: WebSocketSession?, video: Video) {
+        val objectMapper = ObjectMapper()
+        val command = objectMapper.createObjectNode()
 
-        for (calibrationPoint in calibrationPointList) {
-            val calibrationPointJson = JSONObject()
-            calibrationPointJson.put("id", calibrationPoint.id)
+        command.put("command", APPEND_VIDEO.command)
+        command.put("videoId", video.id)
+        command.put("sessionId", video.session.id)
+        command.put("uri", video.uri)
+        command.put("streamingType", video.streamingType.value)
+
+        webSocketSession?.sendMessage(
+            TextMessage(
+                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(command)
+            )
+        )
+    }
+
+    fun setCalibration(
+        webSocketSession: WebSocketSession?,
+        video: Video
+    ) {
+        val objectMapper = ObjectMapper()
+        val command = objectMapper.createObjectNode()
+
+        command.put("command", SET_CALIBRATION.command)
+        command.put("videoId", video.id)
+
+        val calibrationPointJsonArray = objectMapper.createArrayNode()
+
+        for (calibrationPoint in video.calibrationPointList) {
+            val calibrationPointJson = objectMapper.createObjectNode()
             calibrationPointJson.put("xScreen", calibrationPoint.xScreen)
             calibrationPointJson.put("yScreen", calibrationPoint.yScreen)
             calibrationPointJson.put("xWorld", calibrationPoint.xWorld)
             calibrationPointJson.put("yWorld", calibrationPoint.yWorld)
             calibrationPointJson.put("zWorld", calibrationPoint.zWorld)
 
-            calibrationPointJsonArray.put(calibrationPointJson)
+            calibrationPointJsonArray.add(calibrationPointJson)
         }
 
-        json.put("calibrationPointList", calibrationPointJsonArray)
-        webSocketSession.sendMessage(TextMessage(json.toString()))
+        command.set<ArrayNode>("calibrationPointList", calibrationPointJsonArray)
+
+        webSocketSession?.sendMessage(
+            TextMessage(
+                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(command)
+            )
+        )
     }
 
-    fun startProcessingVideo(webSocketSession: WebSocketSession) {
-        val json = JSONObject()
-        json.put("command", START_PROCESSING_VIDEO.toString())
+    fun startStreaming(
+        webSocketSession: WebSocketSession?,
+    ) {
+        val objectMapper = ObjectMapper()
+        val command = objectMapper.createObjectNode()
 
-        webSocketSession.sendMessage(TextMessage(json.toString()))
+        command.put("command", START_STREAMING.command)
+
+        webSocketSession?.sendMessage(
+            TextMessage(
+                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(command)
+            )
+        )
     }
 }

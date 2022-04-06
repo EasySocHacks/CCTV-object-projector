@@ -6,7 +6,7 @@
 #videoPreview {
     display: flex;
     flex-direction: row;
-    justify-content: space-around;
+    justify-content: center;
     flex-wrap: wrap;
 }
 
@@ -23,7 +23,7 @@
     height: 100%;
 }
 
-#addVideoButton {
+.addVideoButton {
     border: 1px solid black;
     border-radius: 5px;
     height: 100px;

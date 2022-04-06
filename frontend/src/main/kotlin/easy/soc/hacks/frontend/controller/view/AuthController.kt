@@ -2,8 +2,6 @@ package easy.soc.hacks.frontend.controller.view
 
 import easy.soc.hacks.frontend.service.UserService
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.context.event.ApplicationReadyEvent
-import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -14,15 +12,6 @@ import javax.servlet.http.HttpSession
 class AuthController {
     @Autowired
     private lateinit var userService: UserService
-
-    @EventListener(ApplicationReadyEvent::class)
-    fun ensureAdminExists() {
-        val adminUser = userService.getAdmin()
-
-        if (adminUser.isEmpty) {
-            userService.saveAdmin()
-        }
-    }
 
     @GetMapping("login")
     fun getLogin(): String {

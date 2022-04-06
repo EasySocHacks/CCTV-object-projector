@@ -2,27 +2,43 @@ package easy.soc.hacks.frontend.service
 
 import easy.soc.hacks.frontend.domain.Video
 import easy.soc.hacks.frontend.repository.VideoRepository
-import easy.soc.hacks.frontend.service.VideoService.Companion.VideoStatus.STOP
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
 @Service
 class VideoService {
-    companion object {
-        enum class VideoStatus {
-            START,
-            STOP
-        }
-
-        var videoStatus = STOP
-    }
-
     @Autowired
     private lateinit var videoRepository: VideoRepository
 
-    fun getVideoById(id: Long) = videoRepository.getVideoById(id)
+    fun findVideoById(id: Long) = videoRepository.findVideoById(id)
 
-    fun findAll(): List<Video> = videoRepository.findAll()
+    fun save(video: Video): Video {
+        val id = videoRepository.save(
+            video.session.id,
+            video.name,
+            video.streamingType.name,
+            video.uri
+        )
 
-    fun save(video: Video) = videoRepository.save(video)
+        return Video(
+            id = id,
+            session = video.session,
+            name = video.name,
+            uri = video.uri,
+            calibrationPointList = video.calibrationPointList,
+            streamingType = video.streamingType
+        )
+    }
+
+    fun setCalibration(video: Video) {
+        for (calibrationPoint in video.calibrationPointList) {
+            videoRepository.setCalibration(
+                video.id,
+                video.session.id,
+                calibrationPoint.id
+            )
+        }
+    }
+
+    fun findVideosBySessionId(sessionId: String) = videoRepository.findVideosBySessionId(sessionId)
 }
