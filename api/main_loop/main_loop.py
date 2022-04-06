@@ -14,7 +14,8 @@ class MainLoop:
     def __init__(self, config):
         self.config = config
 
-        self._video_dict = {}
+        self.session_id = None
+        self.video_dict = {}
         self._video_meta = Manager().dict()
 
         # TODO: change to video_processor_pool
@@ -29,11 +30,13 @@ class MainLoop:
             self._video_processor_list.append(VideoProcessor(
                 self.config,
                 device,
-                self._processor_linker.queue
+                self._processor_linker.queue,
+                self.video_dict
             ))
 
             self._video_processor_queue_list.append(self._video_processor_list[-1].queue)
 
+            self._video_processor_processes.append(self._video_processor_list[-1].generate_process())
             self._video_processor_processes.append(self._video_processor_list[-1].generate_process())
 
         self._main_loop_process = Process(
@@ -74,7 +77,7 @@ class MainLoop:
 
     def append_video(self, video):
         video_id = video.video_id
-        self._video_dict[video_id] = video
+        self.video_dict[video_id] = video
 
         capture = cv2.VideoCapture(video.uri)
 
@@ -85,27 +88,29 @@ class MainLoop:
         }
 
         _, frame = capture.read()
-        self._send_screenshot(video_id, frame)
+        self._send_screenshot(video_id, self.session_id, frame)
 
         capture.release()
 
-    def _send_screenshot(self, video_id, frame):
-        self._logger.debug("Sending screenshot of video with id '{}'".format(video_id))
+    def _send_screenshot(self, video_id, session_id, frame):
+        self._logger.debug(
+            "Sending screenshot of video with id '{}' for session with id '{}'".format(video_id, session_id))
 
-        requests.post("{}://{}:{}/api/v{}/video/{}/screenshot".format(
+        requests.post("{}://{}:{}/api/v{}/video/screenshot?id={}&session={}".format(
             self.config.method,
             self.config.host,
             self.config.port,
             self.config.api_version,
-            video_id
+            video_id,
+            session_id
         ), data=cv2.imencode(".jpg", frame)[1].tobytes())
 
     def _loop(self, video_processor_queue_list):
         self._logger.info("MainLoop start collecting frames")
 
         frame_collector_dict = {}
-        for video_id in self._video_dict:
-            video = self._video_dict[video_id]
+        for video_id in self.video_dict:
+            video = self.video_dict[video_id]
 
             frame_collector_dict[video_id] = FrameCollector(video)
 
@@ -127,9 +132,6 @@ class MainLoop:
                     frame = frame_collector_dict[video_id].get_next()
 
                     batches[video_id].append((iteration_id, frame))
-
-                    if iteration_id % self.config.screenshot_stride == 0:
-                        self._send_screenshot(video_id, frame)
 
                     progress = True
                 except EndOfVideoException:

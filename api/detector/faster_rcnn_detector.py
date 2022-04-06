@@ -12,8 +12,9 @@ class FasterRCNNDetector(Detector):
 
         self.model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
         self.model.requires_grad = False
-        self.model.eval()
         self.model.to(self.device)
+        self.model.share_memory()
+        self.model.eval()
 
     def detect(self, image):
         tensor = torch.unsqueeze(torchvision.transforms.ToTensor()(image), 0).to(self.device)

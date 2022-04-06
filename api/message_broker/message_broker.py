@@ -3,11 +3,13 @@ import json
 from multiprocessing import get_logger
 from threading import Event
 
+import numpy as np
 import websockets
 
 from camera import Camera
+from camera.calibration.calibration import Calibration
 from main_loop import MainLoop
-from video import YouTubeVideo
+from video.video import Video
 
 
 class MessageBroker:
@@ -50,18 +52,55 @@ class MessageBroker:
         command = response["command"]
         self._logger.info("Processing command '{}', received from frontend".format(command))
 
-        if command == "APPEND_CAMERA_VIDEO":
-            video_id = response["id"]
-            # TODO: change to 'uri'
-            uri = response["url"]
+        if command == "START_SESSION":
+            session_id = response["sessionId"]
+
+            self._main_loop.session_id = session_id
+        elif command == "APPEND_VIDEO":
+            video_id = response["videoId"]
+            uri = response["uri"]
+            streaming_type = response["streamingType"]
 
             self._logger.info("Appending camera's video with uri '{}'".format(uri))
 
-            # TODO: camera/file video
-            self._main_loop.append_video(YouTubeVideo(uri, video_id, Camera()))
-        elif command == "START_PROCESSING_VIDEO":
+            self._main_loop.append_video(
+                Video(
+                    video_id,
+                    self._main_loop.session_id,
+                    uri,
+                    streaming_type,
+                    Camera()
+                )
+            )
+        elif command == "START_STREAMING":
             self._main_loop.start()
-        elif command == "COMPUTE_CALIBRATION_MATRIX":
-            pass
+        elif command == "SET_CALIBRATION":
+            video_id = response["videoId"]
+            points = response["calibrationPointList"]
+
+            screen_points = np.array([])
+            world_points = np.array([])
+            for point in points:
+                x_screen = point["xScreen"]
+                y_screen = point["yScreen"]
+
+                screen_points = np.append(screen_points, [x_screen, y_screen])
+
+                x_word = point["xWorld"]
+                y_word = point["yWorld"]
+                z_word = point["zWorld"]
+
+                world_points = np.append(world_points, [x_word, y_word, z_word])
+
+            screen_points = screen_points.reshape((6, 2))
+            world_points = world_points.reshape((6, 3))
+
+            calibration = Calibration(screen_points, world_points)
+            self._logger.debug("Calibration set to video with id '{}' with matrix\n{}\nAnd camera position\n{}".format(
+                video_id,
+                calibration.matrix,
+                calibration.camera_coordinates
+            ))
+            self._main_loop.video_dict[video_id].camera.calibration = calibration
         else:
             self._logger.warning("Unknown command '{}', received from frontend".format(command))

@@ -9,8 +9,9 @@ class YoloDetector(Detector):
 
         self.yolo_version = yolo_version
         self.model = torch.hub.load('ultralytics/yolov5', self.yolo_version, pretrained=True)
-        self.model.eval()
         self.model.to(device)
+        self.model.share_memory()
+        self.model.eval()
 
     def detect(self, image):
         output = self.model(image)

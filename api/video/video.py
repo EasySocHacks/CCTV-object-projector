@@ -1,21 +1,7 @@
-from abc import ABC
-
-import pafy
-
-
-class Video(ABC):
-    def __init__(self, video_id, camera):
+class Video:
+    def __init__(self, video_id, session_id, uri, streaming_type, camera):
         self.video_id = video_id
+        self.session_id = session_id
         self.camera = camera
-
-
-class YouTubeVideo(Video):
-    def __init__(self, url, video_id, camera):
-        super().__init__(video_id, camera)
-
-        self.url = url
-
-        pafy_url = pafy.new(url)
-        play = pafy_url.getbest(preftype="mp4")
-
-        self.uri = play.url
+        self.uri = uri
+        self.streaming_type = streaming_type

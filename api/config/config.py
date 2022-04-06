@@ -23,3 +23,5 @@ class Config:
         self.bbox_expander_type = None
 
         self.screenshot_stride = 1800
+
+        self.fps = 30

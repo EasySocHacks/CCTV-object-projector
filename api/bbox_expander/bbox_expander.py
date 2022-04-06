@@ -18,12 +18,12 @@ class BboxExpander:
 
         self.model = BboxExpandNet()
         self.model.to(self.device)
+        self.model.share_memory()
         self.model.load_state_dict(torch.load(self.weight_path, map_location=torch.device(self.device)))
         self.model.eval()
 
     def expand(self, image):
         expand = self.model(self.data_transforms(image).unsqueeze(0).to(self.device)).tolist()[0]
-        print(expand)
 
         return expand
 
