@@ -53,15 +53,15 @@ interface VideoFragmentRepository : JpaRepository<VideoFragment, Long> {
                 video_fragments.id = :toId or 
                 video_fragments.id = :toId - 1
             )
-            order by video_fragments.id desc
-            limit :maxRange
+            order by video_fragments.id asc
         """,
         nativeQuery = true
     )
     fun findVideoFragmentsByVideoIdAndSessionIdAndVideoFragmentIdRange(
         @Param("videoId") videoId: Long,
         @Param("sessionId") sessionId: String,
-        @Param("toId") toId: Long,
-        @Param("maxRange") maxRange: Long
+        @Param("toId") toId: Long
     ): List<VideoFragment>
+
+    fun existsBySessionIdAndVideoId(sessionId: String, videoId: Long): Boolean
 }

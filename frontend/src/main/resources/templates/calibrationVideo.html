@@ -1,4 +1,5 @@
 <!DOCTYPE HTML>
+<!--suppress XmlDuplicatedId -->
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>CCTV Video Projector</title>
@@ -35,21 +36,21 @@
                 <div class="pointsRow">
                     <div th:id="'screenPoint' + ${i}" class="screenPoint">
                         <div>(</div>
-                        <input th:if="${video.calibrationPointList.size() >= i + 1}" type="text"
+                        <input th:id="'screenPointXInput' + ${i}"
+                               th:if="${video.calibrationPointList.size() >= i + 1}" type="text"
                                th:name="'xScreen' + ${i}"
-                               th:value="${video.calibrationPointList.get(i).getXScreen()}"
-                               readonly>
-                        <input th:unless="${video.calibrationPointList.size() >= i + 1}" type="text"
-                               th:name="'xScreen' + ${i}"
-                               readonly>
+                               th:value="${video.calibrationPointList.get(i).getXScreen()}">
+                        <input th:id="'screenPointXInput' + ${i}"
+                               th:unless="${video.calibrationPointList.size() >= i + 1}" type="text"
+                               th:name="'xScreen' + ${i}">
                         <div>;</div>
-                        <input th:if="${video.calibrationPointList.size() >= i + 1}" type="text"
+                        <input th:id="'screenPointYInput' + ${i}"
+                               th:if="${video.calibrationPointList.size() >= i + 1}" type="text"
                                th:name="'yScreen' + ${i}"
-                               th:value="${video.calibrationPointList.get(i).getYScreen()}"
-                               readonly>
-                        <input th:unless="${video.calibrationPointList.size() >= i + 1}" type="text"
-                               th:name="'yScreen' + ${i}"
-                               readonly>
+                               th:value="${video.calibrationPointList.get(i).getYScreen()}">
+                        <input th:id="'screenPointYInput' + ${i}"
+                               th:unless="${video.calibrationPointList.size() >= i + 1}" type="text"
+                               th:name="'yScreen' + ${i}">
                         <div>)</div>
                     </div>
 
@@ -102,6 +103,38 @@
     let points = []
     for (let i = 0; i < 6; i++) {
         points.push([null, null, null, null])
+    }
+
+    for (let i = 0; i < 6; i++) {
+        document.getElementById("screenPointXInput" + i).oninput = (event) => {
+            const x = parseFloat(event.target.value)
+
+            if (isNaN(x)) {
+                points[i][0] = null
+            } else {
+                points[i][0] = x
+            }
+
+            clearCanvas()
+            for (let i = 0; i < points.length; i++) {
+                drawPoint(i)
+            }
+        }
+
+        document.getElementById("screenPointYInput" + i).oninput = (event) => {
+            const y = parseFloat(event.target.value)
+
+            if (isNaN(y)) {
+                points[i][1] = null
+            } else {
+                points[i][1] = y
+            }
+
+            clearCanvas()
+            for (let i = 0; i < points.length; i++) {
+                drawPoint(i)
+            }
+        }
     }
 
     let draggingPointId = null
@@ -234,19 +267,19 @@
     }
 
     function applyPointChange(pid) {
-        const xScreen = points[pid][0].toFixed(2)
-        const yScreen = points[pid][1].toFixed(2)
+        const xScreen = points[pid][0]
+        const yScreen = points[pid][1]
 
         const xWorld = points[pid][2]
         const yWorld = points[pid][3]
         const zWorld = points[pid][4]
 
         if (xScreen != null) {
-            document.getElementsByName("xScreen" + pid)[0].value = xScreen
+            document.getElementsByName("xScreen" + pid)[0].value = xScreen.toFixed(2)
         }
 
         if (yScreen != null) {
-            document.getElementsByName("yScreen" + pid)[0].value = yScreen
+            document.getElementsByName("yScreen" + pid)[0].value = yScreen.toFixed(2)
         }
 
         if (xWorld != null) {

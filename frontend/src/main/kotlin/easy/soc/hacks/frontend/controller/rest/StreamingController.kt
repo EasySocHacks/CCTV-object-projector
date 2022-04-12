@@ -2,10 +2,10 @@ package easy.soc.hacks.frontend.controller.rest
 
 import com.fasterxml.jackson.databind.JsonNode
 import easy.soc.hacks.frontend.domain.*
+import easy.soc.hacks.frontend.domain.StreamingType.FILE
 import easy.soc.hacks.frontend.service.*
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
-import org.springframework.http.HttpStatus.NOT_FOUND
+import org.springframework.http.HttpStatus.*
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -93,8 +93,9 @@ class StreamingController {
                     videoFragmentService.save(
                         VideoFragment(
                             id = batchId,
-                            video = videoService.findVideoById(
-                                id = videoId
+                            video = videoService.findVideoByIdAndSessionId(
+                                id = videoId,
+                                sessionId = session.id
                             ).get(),
                             duration = duration,
                             data = data
@@ -117,20 +118,19 @@ class StreamingController {
 
                     projectionService.save(
                         Projection(
+                            pointId = j.toLong(),
                             frameId = frameId,
                             batchId = batchId,
                             session = session,
                             x = pointJson.get("x").asDouble(),
                             y = pointJson.get("y").asDouble(),
-                            radius = pointJson.get("radius").asDouble()
+                            radius = pointJson.get("radius").asDouble(),
+                            classType = ProjectionClassType.valueOf(pointJson.get("classType").textValue())
                         )
                     )
                 }
             }
         } catch (e: Exception) {
-            println(e)
-            println(e.stackTrace)
-            println()
             return ResponseEntity.status(INTERNAL_SERVER_ERROR).build()
         }
 
@@ -188,31 +188,51 @@ class StreamingController {
             val nextBatchIdRef = httpSession.getAttribute("nextBatchId") as AtomicLong
             val currentBatchId = nextBatchIdRef.get()
 
-            val manifest = videoFragmentService.getManifestByVideoIdAndSessionIdAndNextBatchId(
+            val sequenceIdManifestPaint = videoFragmentService.getManifestByVideoIdAndSessionIdAndNextBatchId(
                 videoId = videoId,
                 sessionId = session.id,
                 nextBatchId = currentBatchId
             )
 
-            processedVideoVideoFragmentIdSet.add(
-                VideoFragmentId(
-                    id = currentBatchId,
-                    videoId = videoId,
-                    sessionId = session.id
+            if (sequenceIdManifestPaint.first == currentBatchId) {
+                processedVideoVideoFragmentIdSet.add(
+                    VideoFragmentId(
+                        id = currentBatchId,
+                        videoId = videoId,
+                        sessionId = session.id
+                    )
                 )
-            )
+            }
 
             Thread {
                 checkProcessedBatch(httpSession)
             }.start()
 
-            return ResponseEntity.ok().body(manifest)
+            return ResponseEntity.ok().body(sequenceIdManifestPaint.second)
         } catch (e: NoSuchElementException) {
             return ResponseEntity.status(NOT_FOUND).build()
         } catch (e: Exception) {
-            println(e)
-            println()
             return ResponseEntity.status(INTERNAL_SERVER_ERROR).build()
+        }
+    }
+
+    @GetMapping("video/manifest/check")
+    fun checkManifestAvailable(
+        @RequestParam("id") videoId: Long
+    ): ResponseEntity<Boolean> {
+        return try {
+            val session = sessionService.getStreamingSession().get()
+
+            ResponseEntity.ok().body(
+                videoFragmentService.checkExistsVideoFragmentBySessionIdAndVideoId(
+                    session.id,
+                    videoId
+                )
+            )
+        } catch (e: NoSuchElementException) {
+            return ResponseEntity.status(NOT_FOUND).build()
+        } catch (e: Exception) {
+            ResponseEntity.status(INTERNAL_SERVER_ERROR).build()
         }
     }
 
@@ -222,11 +242,14 @@ class StreamingController {
         @RequestParam("fragment") fragmentId: Long
     ): ResponseEntity<ByteArray> {
         return try {
+            val session = sessionService.getStreamingSession().get()
+
             ResponseEntity.ok().body(
                 videoFragmentService.findVideoFragment(
                     id = fragmentId,
-                    video = videoService.findVideoById(
-                        id = videoId
+                    video = videoService.findVideoByIdAndSessionId(
+                        id = videoId,
+                        sessionId = session.id
                     ).get()
                 ).get().data
             )
@@ -245,8 +268,9 @@ class StreamingController {
     ): ResponseEntity<Unit> {
         videoScreenshotService.save(
             VideoScreenshot(
-                video = videoService.findVideoById(
-                    id = videoId
+                video = videoService.findVideoByIdAndSessionId(
+                    id = videoId,
+                    sessionId = sessionId
                 ).get(),
                 data = data
             )
@@ -260,7 +284,8 @@ class StreamingController {
         @RequestParam("id") videoId: Long,
         httpSession: HttpSession
     ): ResponseEntity<ByteArray> {
-        val video = videoService.findVideoById(videoId).orElseGet { null }
+        val session = sessionService.getActiveSession().get()
+        val video = videoService.findVideoByIdAndSessionId(videoId, session.id).orElseGet { null }
 
         if (video == null) {
             messageService.sendMessage(
@@ -278,6 +303,30 @@ class StreamingController {
             ResponseEntity.ok().body(screenshotOptional.get().data)
         } else {
             ResponseEntity.status(NOT_FOUND).build()
+        }
+    }
+
+    @GetMapping("video/download")
+    fun downloadFileVideo(
+        @RequestParam("id") videoId: Long,
+        @RequestParam("session") sessionId: String
+    ): ResponseEntity<ByteArray> {
+        try {
+            val video = videoService.findVideoByIdAndSessionId(videoId, sessionId).get()
+
+            if (video.streamingType != FILE) {
+                return ResponseEntity.status(BAD_REQUEST).build()
+            }
+
+            return ResponseEntity.ok().body(
+                video.data
+            )
+        } catch (e: NoSuchElementException) {
+            println(e)
+            return ResponseEntity.status(NOT_FOUND).build()
+        } catch (e: Exception) {
+            println(e)
+            return ResponseEntity.status(INTERNAL_SERVER_ERROR).build()
         }
     }
 }

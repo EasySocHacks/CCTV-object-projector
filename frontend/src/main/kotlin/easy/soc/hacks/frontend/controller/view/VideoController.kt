@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.multipart.MultipartFile
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.atomic.AtomicLong
 import javax.servlet.http.HttpSession
@@ -133,7 +134,8 @@ class VideoController {
     fun addVideo(
         @RequestParam("type") streamingType: StreamingType,
         @RequestParam("name") name: String,
-        @RequestParam("uri") uri: String,
+        @RequestParam("uri") uri: String?,
+        @RequestParam("file") file: MultipartFile?,
         httpSession: HttpSession
     ): String {
         if (!messageService.isAccessGranted(
@@ -162,6 +164,7 @@ class VideoController {
                     session = session,
                     name = name,
                     uri = uri,
+                    data = file?.bytes,
                     streamingType = streamingType
                 )
             )
@@ -179,8 +182,10 @@ class VideoController {
         model: Model,
         httpSession: HttpSession
     ): String {
-        val video = videoService.findVideoById(
-            id = videoId
+        val session = sessionService.getActiveSession().get()
+        val video = videoService.findVideoByIdAndSessionId(
+            id = videoId,
+            session.id
         ).orElseGet { null }
 
         if (video == null) {
@@ -222,7 +227,8 @@ class VideoController {
         @ModelAttribute calibrationPointListWrapper: CalibrationPointListWrapper,
         httpSession: HttpSession
     ): String {
-        val video = videoService.findVideoById(videoId).orElseGet { null }
+        val session = sessionService.getActiveSession().get()
+        val video = videoService.findVideoByIdAndSessionId(videoId, session.id).orElseGet { null }
 
         if (video == null) {
             messageService.sendMessage(

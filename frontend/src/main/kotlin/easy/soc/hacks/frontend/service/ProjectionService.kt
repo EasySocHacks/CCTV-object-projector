@@ -12,12 +12,14 @@ class ProjectionService {
 
     fun save(projection: Projection): Projection {
         val pointId = projectionRepository.save(
+            pointId = projection.pointId,
             batchId = projection.batchId,
             frameId = projection.frameId,
             sessionId = projection.session!!.id,
             radius = projection.radius,
             x = projection.x,
-            y = projection.y
+            y = projection.y,
+            classType = projection.classType.name
         )
 
         return Projection(
@@ -27,7 +29,8 @@ class ProjectionService {
             session = projection.session,
             radius = projection.radius,
             x = projection.x,
-            y = projection.y
+            y = projection.y,
+            classType = projection.classType
         )
     }
 

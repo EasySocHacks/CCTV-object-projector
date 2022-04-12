@@ -27,7 +27,7 @@ class User(
 ) {
     companion object {
         fun encryptPassword(password: String, salt: ByteArray): String {
-            val spec = PBEKeySpec(password.toCharArray(), salt, 65536, 256)
+            val spec = PBEKeySpec(password.toCharArray(), salt, 256, 256)
             val secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
 
             return String(secretKeyFactory.generateSecret(spec).encoded, UTF_8)

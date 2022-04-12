@@ -41,8 +41,8 @@ class Video(
     @Column(name = "name", nullable = false)
     val name: String,
 
-    @Column(name = "uri", nullable = false)
-    val uri: String,
+    @Column(name = "uri", nullable = true)
+    val uri: String? = null,
 
     @Column(name = "calibration_point_id", nullable = false)
     @OneToMany
@@ -50,5 +50,8 @@ class Video(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "streaming_type", nullable = false)
-    val streamingType: StreamingType
+    val streamingType: StreamingType,
+
+    @Column(name = "data", nullable = true)
+    val data: ByteArray? = null
 )

@@ -4,6 +4,11 @@ import easy.soc.hacks.frontend.annotation.AllOpen
 import lombok.Data
 import javax.persistence.*
 
+enum class ProjectionClassType {
+    PERSON,
+    CAR
+}
+
 @AllOpen
 @Data
 data class ProjectionId(
@@ -23,8 +28,8 @@ data class ProjectionId(
 class Projection(
     @Id
     @Column(name = "point_id", nullable = false)
-    @GeneratedValue(strategy = GenerationType.IDENTITY, generator = "projections_point_Id_seq")
-    @SequenceGenerator(name = "projections_point_Id_seq", initialValue = 1)
+//    @GeneratedValue(strategy = GenerationType.IDENTITY, generator = "projections_point_id_seq")
+//    @SequenceGenerator(name = "projections_point_id_seq", initialValue = 1)
     val pointId: Long = 0,
 
     @Id
@@ -50,5 +55,9 @@ class Projection(
     val y: Double,
 
     @Column(name = "radius", nullable = false)
-    val radius: Double
+    val radius: Double,
+
+    @Column(name = "class_type", nullable = false)
+    @Enumerated(EnumType.STRING)
+    val classType: ProjectionClassType
 )

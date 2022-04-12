@@ -3,6 +3,7 @@ package easy.soc.hacks.frontend.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import easy.soc.hacks.frontend.domain.Session
+import easy.soc.hacks.frontend.domain.StreamingType.FILE
 import easy.soc.hacks.frontend.domain.Video
 import easy.soc.hacks.frontend.service.BackendBrokerService.Companion.Command.*
 import org.springframework.stereotype.Service
@@ -45,7 +46,14 @@ class BackendBrokerService {
         command.put("command", APPEND_VIDEO.command)
         command.put("videoId", video.id)
         command.put("sessionId", video.session.id)
-        command.put("uri", video.uri)
+        if (video.streamingType == FILE) {
+            command.put(
+                "uri",
+                "video/download?id=${video.id}&session=${video.session.id}"
+            )
+        } else {
+            command.put("uri", video.uri)
+        }
         command.put("streamingType", video.streamingType.value)
 
         webSocketSession?.sendMessage(

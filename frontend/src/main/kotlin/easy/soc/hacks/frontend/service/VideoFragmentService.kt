@@ -28,25 +28,30 @@ class VideoFragmentService {
     fun findVideoFragmentsByVideoIdAndSessionIdAndVideoFragmentIdRange(
         videoId: Long,
         sessionId: String,
-        toId: Long,
-        maxRange: Long
-    ): ByteArray {
+        toId: Long
+    ): Pair<Long, ByteArray> {
         val ids = mutableListOf<Long>()
         val durations = mutableListOf<Double>()
 
         videoFragmentRepository.findVideoFragmentsByVideoIdAndSessionIdAndVideoFragmentIdRange(
             videoId,
             sessionId,
-            toId,
-            maxRange
+            toId
         ).apply {
             ids.addAll(this.map { it.id })
             durations.addAll(this.map { it.duration })
         }
 
-        if (toId - maxRange + 1 <= 0L) {
-            ids.add(0)
-            durations.add(0.0)
+        if (ids.size < 2 && toId > 1) {
+            return findVideoFragmentsByVideoIdAndSessionIdAndVideoFragmentIdRange(
+                videoId,
+                sessionId,
+                toId - 1
+            )
+        }
+
+        if (ids.size < 2) {
+            throw IllegalStateException()
         }
 
         val manifestTextStringBuffer = StringBuilder()
@@ -61,7 +66,7 @@ class VideoFragmentService {
             )
         }
 
-        return manifestTextStringBuffer.toString().toByteArray()
+        return Pair(ids[0], manifestTextStringBuffer.toString().toByteArray())
     }
 
     fun getManifestByVideoIdAndSessionIdAndNextBatchId(
@@ -71,8 +76,7 @@ class VideoFragmentService {
     ) = findVideoFragmentsByVideoIdAndSessionIdAndVideoFragmentIdRange(
         videoId,
         sessionId,
-        nextBatchId,
-        2
+        nextBatchId
     )
 
     fun findVideoFragment(id: Long, video: Video): Optional<VideoFragment> {
@@ -94,6 +98,11 @@ class VideoFragmentService {
 
 
     fun getMaxVideoFragmentIdBySessionId(sessionId: String) =
-        videoFragmentRepository.getMaxVideoFragmentIdBySessionId(sessionId).map { it - 1 }
+        videoFragmentRepository.getMaxVideoFragmentIdBySessionId(sessionId)
+
+    fun checkExistsVideoFragmentBySessionIdAndVideoId(
+        sessionId: String,
+        videoId: Long
+    ) = videoFragmentRepository.existsBySessionIdAndVideoId(sessionId, videoId)
 }
 

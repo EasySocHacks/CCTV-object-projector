@@ -39,18 +39,15 @@
         /*<![CDATA[*/
         const cfg = Hls.DefaultConfig
 
-        cfg["initialLiveManifestSize"] = 2
+        cfg["initialLiveManifestSize"] = 1
         cfg["backBufferLength"] = 0
         cfg["maxBufferHole"] = 0.0
         cfg["maxMaxBufferLength"] = 300
-        cfg["maxMaxBufferLength"] = 180
         cfg["liveSyncDurationCount"] = 0
         cfg["liveDurationInfinity"] = true
 
         if (Hls.isSupported()) {
-            const videoIds = [[${videoList}]].map((video) => video.id)
-
-            videoIds.forEach(videoId => {
+            function setVideo(videoId) {
                 let video = document.getElementById('video' + videoId);
                 let hls = new Hls();
 
@@ -59,6 +56,27 @@
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     video.play();
                 });
+            }
+
+            function checkFragmentExists(videoId) {
+                const checkFragmentExistsXHR = new XMLHttpRequest()
+                checkFragmentExistsXHR.open("GET", "/api/v1/video/manifest/check?id=" + videoId)
+                checkFragmentExistsXHR.onload = (event) => {
+                    if (event.target.status === 200 && event.target.response === true) {
+                        setVideo(videoId)
+                    } else if (event.target.status === 404) {}
+                    else {
+                        setTimeout(checkFragmentExists, 1000, videoId)
+                    }
+                }
+
+                checkFragmentExistsXHR.send()
+            }
+
+            const videoIds = [[${videoList}]].map((video) => video.id)
+
+            videoIds.forEach(videoId => {
+                checkFragmentExists(videoId)
             })
         }
         /*]]>*/

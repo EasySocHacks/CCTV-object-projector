@@ -1,4 +1,5 @@
 <!DOCTYPE HTML>
+<!--suppress XmlDuplicatedId -->
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>CCTV Video Projector</title>
@@ -17,7 +18,7 @@
     </th:block>
     <th:block th:case="*">
         <div id="addVideoDiv">
-            <form id="addVideoForm" action="/video/add" method="post">
+            <form id="addVideoForm" action="/video/add" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="type" th:value="${param.get('type')}">
 
                 <div class="addVideoFormBlock">
@@ -26,8 +27,15 @@
                 </div>
 
                 <div class="addVideoFormBlock">
-                    <label for="addVideoUri" th:text="#{video.add.form.uri}"></label>
-                    <input id="addVideoUri" type="url" name="uri">
+                    <th:block th:if="${param.get('type').toString()} == 'camera'">
+                        <label for="addVideoUri" th:text="#{video.add.form.uri}"></label>
+                        <input id="addVideoUri" type="url" name="uri">
+                    </th:block>
+
+                    <th:block th:if="${param.get('type').toString()} == 'file'">
+                        <label for="addVideoUri" th:text="#{video.add.form.uri}"></label>
+                        <input id="addVideoUri" type="file" name="file" accept="video/*">
+                    </th:block>
                 </div>
                 <button type="submit" th:text="#{video.add.form.submit}"></button>
             </form>

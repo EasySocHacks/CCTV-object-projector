@@ -13,20 +13,22 @@ interface ProjectionRepository : JpaRepository<Projection, Long> {
     @Query(
         """
             insert into projections
-            (batch_id, frame_id, session_id, radius, x, y)
-             values (:batchId, :frameId, :sessionId, :radius, :x, :y)
+            (point_id, batch_id, frame_id, session_id, radius, x, y, class_type)
+             values (:pointId, :batchId, :frameId, :sessionId, :radius, :x, :y, :classType)
              returning point_id
         """,
         nativeQuery = true
     )
     @Transactional
     fun save(
+        @Param("pointId") pointId: Long,
         @Param("batchId") batchId: Long,
         @Param("frameId") frameId: Long,
         @Param("sessionId") sessionId: String,
         @Param("radius") radius: Double,
         @Param("x") x: Double,
-        @Param("y") y: Double
+        @Param("y") y: Double,
+        @Param("classType") classType: String
     ): Long
 
     fun findProjectionsByBatchIdAndSessionId(

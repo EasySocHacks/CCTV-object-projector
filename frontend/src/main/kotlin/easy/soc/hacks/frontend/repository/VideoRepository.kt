@@ -12,15 +12,26 @@ import javax.transaction.Transactional
 
 @Repository
 interface VideoRepository : JpaRepository<Video, Long> {
-    fun findVideoById(id: Long): Optional<Video>
+    @Query(
+        """
+            select * from  videos
+            where id = :id and
+            session_id = :sessionId
+        """,
+        nativeQuery = true
+    )
+    fun findVideoByIdAndSessionId(
+        @Param("id") id: Long,
+        @Param("sessionId") sessionId: String
+    ): Optional<Video>
 
     fun findVideosBySessionId(sessionId: String): List<Video>
 
     @Query(
         """
             insert into videos
-            (session_id, name, streaming_type, uri)
-            values (:sessionId, :name, :streamingType, :uri)
+            (session_id, name, streaming_type, uri, data)
+            values (:sessionId, :name, :streamingType, :uri, :data)
             returning id
         """,
         nativeQuery = true
@@ -30,7 +41,8 @@ interface VideoRepository : JpaRepository<Video, Long> {
         @Param("sessionId") sessionId: String,
         @Param("name") name: String,
         @Param("streamingType") streamingType: String,
-        @Param("uri") uri: String
+        @Param("uri") uri: String?,
+        @Param("data") data: ByteArray?
     ): Long
 
     @Query(

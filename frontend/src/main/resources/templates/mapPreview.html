@@ -10,17 +10,78 @@
 
 <th:block th:fragment="collectAndShowMapScript">
     <script th:inline="javascript">
+        const xMin = -5
+        const xMax = 5
+        const yMin = -5
+        const yMax = 5
+
         const canvas = document.getElementById("mapCanvas")
-        const width = canvas.width
-        const height = canvas.height
+        canvas.width = canvas.style.width
+        canvas.height = canvas.style.height
 
         const context = canvas.getContext("2d")
+
+        function clearCanvas() {
+            context.clearRect(0, 0, canvas.width, canvas.height)
+        }
+
+        function isPointOnCanvas(point) {
+            return (
+                point[0] >= xMin && point[0] <= xMax &&
+                point[1] >= yMin && point[1] <= yMax
+            )
+        }
 
         function requestProjection() {
             const loadingGifXHR = new XMLHttpRequest()
             loadingGifXHR.open("GET", "/api/v1/session/projection")
             loadingGifXHR.onload = (event) => {
-                console.log(event.target.response)
+                const batchProjections = event.target.response
+
+                if (batchProjections.length > 0) {
+                    let frameIdDict = {}
+
+                    for (let projection in batchProjections) {
+                        const frameId = projection["frameId"]
+                        const x = parseFloat(projection["x"])
+                        const y = parseFloat(projection["y"])
+                        const radius = parseFloat(projection["radius"])
+
+                        if (frameIdDict[frameId] === undefined) {
+                            frameIdDict[frameId] = []
+                        }
+
+                        frameIdDict[frameId].push([x, y, radius])
+                    }
+
+                    clearCanvas()
+
+                    for (let frameId in frameIdDict) {
+                        for (let point in frameIdDict[frameId]) {
+                            const x = point[0]
+                            const y = point[1]
+                            const radius = point[2]
+
+                            console.log(
+                                x,
+                                y,
+                                radius,
+                                isPointOnCanvas([x, y]),
+                                (x - xMin) / (xMax - xMin) * canvas.width,
+                                (y - yMin) / (yMax - yMin) * canvas.height
+                            )
+
+                            if (isPointOnCanvas([x, y])) {
+                                const canvasX = (x - xMin) / (xMax - xMin) * canvas.width
+                                const canvasY = (y - yMin) / (yMax - yMin) * canvas.height
+
+                                context.beginPath()
+                                context.arc(canvasX, canvasY, 2, 0, 2 * Math.PI)
+                                context.stroke()
+                            }
+                        }
+                    }
+                }
             }
 
             loadingGifXHR.send()

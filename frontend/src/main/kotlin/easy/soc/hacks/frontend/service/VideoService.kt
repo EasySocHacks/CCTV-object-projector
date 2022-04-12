@@ -10,14 +10,16 @@ class VideoService {
     @Autowired
     private lateinit var videoRepository: VideoRepository
 
-    fun findVideoById(id: Long) = videoRepository.findVideoById(id)
+    fun findVideoByIdAndSessionId(id: Long, sessionId: String) =
+        videoRepository.findVideoByIdAndSessionId(id, sessionId)
 
     fun save(video: Video): Video {
         val id = videoRepository.save(
             video.session.id,
             video.name,
             video.streamingType.name,
-            video.uri
+            video.uri,
+            video.data
         )
 
         return Video(
