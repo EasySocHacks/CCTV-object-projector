@@ -1,10 +1,12 @@
 import asyncio
 import json
-from multiprocessing import get_logger
-from threading import Event
+import os
+from threading import Event, Thread
 
 import numpy as np
+import requests
 import websockets
+from torch.multiprocessing import get_logger
 
 from camera import Camera
 from camera.calibration.calibration import Calibration
@@ -20,6 +22,8 @@ class MessageBroker:
         self._kill_thread_event = Event()
 
         self._main_loop = MainLoop(config)
+
+        self._video_download_processes = []
 
     def start(self):
         self._logger.info("Starting MessageBroker")
@@ -48,6 +52,47 @@ class MessageBroker:
                 response_json = json.loads(response_data)
                 self._proceed_command(response_json)
 
+    def _download_video(self, video_id, path):
+        self._logger.info("Start downloading video with id '{}'".format(video_id))
+
+        response = requests.get("{}://{}:{}/api/v{}/{}".format(
+            self.config.method,
+            self.config.host,
+            self.config.port,
+            self.config.api_version,
+            path
+        ))
+
+        video_dir_path = "{}/{}".format(
+            os.path.dirname(os.path.abspath(__file__)),
+            self.config.save_file_video_dir
+        )
+
+        if not os.path.exists(video_dir_path):
+            os.makedirs(video_dir_path, exist_ok=True)
+
+        video_file_path = "{}/file-video-vid#{}-sid#{}".format(
+            video_dir_path,
+            video_id,
+            self._main_loop.session_id
+        )
+
+        with open(video_file_path, "wb") as video_file:
+            video_file.write(response.content)
+            video_file.flush()
+
+        self._main_loop.append_video(
+            Video(
+                video_id,
+                self._main_loop.session_id,
+                video_file_path,
+                "file",
+                Camera()
+            )
+        )
+
+        self._logger.info("End downloading vido with id '{}'".format(video_id))
+
     def _proceed_command(self, response):
         command = response["command"]
         self._logger.info("Processing command '{}', received from frontend".format(command))
@@ -56,23 +101,42 @@ class MessageBroker:
             session_id = response["sessionId"]
 
             self._main_loop.session_id = session_id
+        elif command == "STOP_SESSION":
+            session_id = response["sessionId"]
+
+            if self._main_loop.session_id == session_id:
+                self._main_loop.stop()
+
+                del self._main_loop
+                self._main_loop = MainLoop(self.config)
         elif command == "APPEND_VIDEO":
             video_id = response["videoId"]
             uri = response["uri"]
             streaming_type = response["streamingType"]
 
-            self._logger.info("Appending camera's video with uri '{}'".format(uri))
+            self._logger.info("Appending video with uri '{}'".format(uri))
 
-            self._main_loop.append_video(
-                Video(
-                    video_id,
-                    self._main_loop.session_id,
-                    uri,
-                    streaming_type,
-                    Camera()
+            if streaming_type == "file":
+                self._video_download_processes.append(Thread(
+                    target=self._download_video,
+                    args=(video_id, uri,)
+                ))
+
+                self._video_download_processes[-1].start()
+            else:
+                self._main_loop.append_video(
+                    Video(
+                        video_id,
+                        self._main_loop.session_id,
+                        uri,
+                        streaming_type,
+                        Camera()
+                    )
                 )
-            )
         elif command == "START_STREAMING":
+            for video_download_process in self._video_download_processes:
+                video_download_process.join()
+
             self._main_loop.start()
         elif command == "SET_CALIBRATION":
             video_id = response["videoId"]
@@ -96,10 +160,9 @@ class MessageBroker:
             world_points = world_points.reshape((6, 3))
 
             calibration = Calibration(screen_points, world_points)
-            self._logger.debug("Calibration set to video with id '{}' with matrix\n{}\nAnd camera position\n{}".format(
+            self._logger.debug("Calibration set to video with id '{}' with matrix\n{}".format(
                 video_id,
-                calibration.matrix,
-                calibration.camera_coordinates
+                calibration.matrix
             ))
             self._main_loop.video_dict[video_id].camera.calibration = calibration
         else:

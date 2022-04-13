@@ -10,8 +10,8 @@ classes_names = ["person"]
 class Detectron2Detector(Detector):
     def __init__(self,
                  device,
-                 model_name="COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml",
-                 model_weights=model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml")):
+                 model_name,
+                 model_weights):
         super().__init__(device)
         detector_config = get_cfg()
         detector_config.merge_from_file(model_zoo.get_config_file(model_name))
@@ -35,3 +35,12 @@ class Detectron2Detector(Detector):
             return None
         else:
             return classes_names[class_id]
+
+
+class Detectron2MaskRCNN(Detectron2Detector):
+    def __init__(self, device):
+        super().__init__(
+            device,
+            "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
+            model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml")
+        )

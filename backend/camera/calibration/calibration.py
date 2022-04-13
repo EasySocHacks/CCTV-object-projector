@@ -35,23 +35,21 @@ class Calibration:
 
         self.matrix = P
 
-        H = P[:, :3]
-        h = P[:, 3]
-
-        self.camera_coordinates = -np.linalg.inv(H) @ h
-
     def project_3d_to_2d(self, coord):
         a, b, c = self.matrix @ np.append(coord, np.ones(1)).T
 
         return np.array([a / c, b / c])
 
     def project_2d_to_3d_homo(self, coord):
-        a, b, c, d = self.matrix.T @ np.append(coord, np.ones(1))
+        M = np.array([
+            [self.matrix[2, 0] * coord[0] - self.matrix[0, 0], self.matrix[2, 1] * coord[0] - self.matrix[0, 1]],
+            [self.matrix[2, 0] * coord[1] - self.matrix[1, 0], self.matrix[2, 1] * coord[1] - self.matrix[1, 1]]
+        ])
+        v = np.array([
+            self.matrix[0, 3] - self.matrix[2, 3] * coord[0],
+            self.matrix[1, 3] - self.matrix[2, 3] * coord[1]
+        ])
 
-        detect_3d = np.array([a / d, b / d, c / d])
+        X, Y = np.linalg.solve(M, v)
 
-        vec = detect_3d - self.camera_coordinates
-
-        k = self.camera_coordinates[2] / vec[2]
-
-        return self.camera_coordinates + vec * k
+        return np.array([X, Y, 0])

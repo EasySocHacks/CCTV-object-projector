@@ -9,7 +9,7 @@ import ffmpeg
 import requests
 from torch.multiprocessing import Process, get_logger, Queue
 
-from detector.object_class import ObjectClassType
+from projector import Projector
 
 
 class ProcessorLinker:
@@ -19,6 +19,8 @@ class ProcessorLinker:
 
         self.queue = Queue()
         self._linker_process = Process(target=self._link, args=(self.queue, self.video_meta,))
+
+        self._projector = Projector(self.config)
 
         self._logger = get_logger()
 
@@ -49,8 +51,6 @@ class ProcessorLinker:
             width = int(self.video_meta[video_id]["width"])
             height = int(self.video_meta[video_id]["height"])
 
-            projection_radius_list = []
-
             with tempfile.NamedTemporaryFile(suffix=".mp4") as tmp_file_mp4:
                 writer = cv2.VideoWriter(
                     tmp_file_mp4.name,
@@ -59,19 +59,12 @@ class ProcessorLinker:
                     (width, height)
                 )
 
-                for frame, projection_class_list in video_batch:
-                    writer.write(frame)
+                for frame_id, (frame, projection_class_idx_array) in enumerate(video_batch):
+                    if frame is not None:
+                        writer.write(frame)
 
-                    projection = projection_class_list[0]
-                    obj_class = projection_class_list[1]
-
-                    radius = 0.0
-                    if obj_class == ObjectClassType.PERSON.value:
-                        radius = 1.0 / 5.0
-                    if obj_class == ObjectClassType.CAR.value:
-                        radius = 1.5
-
-                    projection_radius_list.append((projection, radius))
+                    if projection_class_idx_array is not None:
+                        self._projector.append_projection_class_list(video_id, frame_id, projection_class_idx_array)
 
                 writer.release()
 
@@ -100,19 +93,6 @@ class ProcessorLinker:
 
                     data = tmp_file_ts.read()
 
-                    # # TODO: Send whole batch
-                    # requests.post("{}://{}:{}/api/v{}/video/{}/fragment/{}".format(
-                    #     self.config.method,
-                    #     self.config.host,
-                    #     self.config.port,
-                    #     self.config.api_version,
-                    #     video_id,
-                    #     sequence_id
-                    # ), data=data,
-                    #     headers={
-                    #         "X-Fragment-duration": str(duration)
-                    #     })
-
                     fragments_json.append({
                         "duration": duration,
                         "videoId": video_id,
@@ -128,14 +108,15 @@ class ProcessorLinker:
             self.config.host,
             self.config.port,
             self.config.api_version,
-            sequence_id,
+            sequence_id + 1,
         ), json={
             "fragments": fragments_json,
-            "projections": []
+            "projections": self._projector.get_json_batch()
         })
 
         self._logger.debug("Sent batch '{}' to frontend with response '{}".format(sequence_id, response))
 
+    # noinspection PyUnboundLocalVariable,DuplicatedCode
     def _link(self, queue, video_meta):
         processed_dict = {}
 
@@ -145,22 +126,34 @@ class ProcessorLinker:
         batches = {}
         append_cnt = 0
 
+        done_cnt = 0
+
         while True:
-            video_id, iteration_id, frame, projection_class_list = queue.get()
+            data = queue.get()
+
+            if data is None:
+                done_cnt += 1
+
+                if done_cnt == len(self.config.available_devices) * self.config.video_processor_count:
+                    break
+
+                continue
+
+            video_id, iteration_id, frame, projection_class_idx_array = data
 
             if iteration_id not in processed_dict:
                 processed_dict[iteration_id] = []
 
-            processed_dict[iteration_id].append((video_id, frame, projection_class_list))
+            processed_dict[iteration_id].append((video_id, frame, projection_class_idx_array))
 
             while next_iteration_id in processed_dict and len(processed_dict[next_iteration_id]) == len(video_meta):
                 self._logger.debug("Start linking iteration id '{}'".format(iteration_id))
 
-                for video_id, frame, projection_class_list in processed_dict[next_iteration_id]:
+                for video_id, frame, projection_class_idx_array in processed_dict[next_iteration_id]:
                     if video_id not in batches:
                         batches[video_id] = []
 
-                    batches[video_id].append((frame, projection_class_list))
+                    batches[video_id].append((frame, projection_class_idx_array))
                     append_cnt += 1
 
                 del processed_dict[next_iteration_id]
@@ -174,3 +167,34 @@ class ProcessorLinker:
                     append_cnt = 0
 
                 next_iteration_id += 1
+
+        while next_iteration_id in processed_dict:
+            self._logger.debug("Start linking iteration id '{}'".format(next_iteration_id))
+
+            for video_id, frame, projection_class_idx_array in processed_dict[next_iteration_id]:
+                if video_id not in batches:
+                    batches[video_id] = []
+
+                batches[video_id].append((frame, projection_class_idx_array))
+                append_cnt += 1
+
+            del processed_dict[next_iteration_id]
+
+            if append_cnt == self.config.stride_between_send * len(video_meta):
+                Thread(target=self._convert_and_send, args=(next_sequence_id, batches,)).start()
+                next_sequence_id += 1
+
+                batches = {}
+
+                append_cnt = 0
+
+            next_iteration_id += 1
+
+        requests.post("{}://{}:{}/api/v{}/session/stop".format(
+            self.config.method,
+            self.config.host,
+            self.config.port,
+            self.config.api_version
+        ))
+
+        self._logger.info("Process linker stopped")
