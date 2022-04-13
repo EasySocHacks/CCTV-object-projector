@@ -53,7 +53,7 @@ interface VideoFragmentRepository : JpaRepository<VideoFragment, Long> {
                 video_fragments.id = :toId or 
                 video_fragments.id = :toId - 1
             )
-            order by video_fragments.id asc
+            order by video_fragments.id desc 
         """,
         nativeQuery = true
     )
@@ -63,5 +63,27 @@ interface VideoFragmentRepository : JpaRepository<VideoFragment, Long> {
         @Param("toId") toId: Long
     ): List<VideoFragment>
 
-    fun existsBySessionIdAndVideoId(sessionId: String, videoId: Long): Boolean
+    @Query(
+        """
+            select count(*) from video_fragments
+            where session_id = :sessionId
+            and video_id = :videoId 
+        """,
+        nativeQuery = true
+    )
+    fun countBySessionIdAndVideoId(sessionId: String, videoId: Long): Long
+
+    @Query(
+        """
+            select duration from video_fragments
+            where session_id = :sessionId
+            and id = :id
+            fetch first row only 
+        """,
+        nativeQuery = true
+    )
+    fun getDurationBySessionIdAndId(
+        @Param("sessionId") sessionId: String,
+        @Param("id") id: Long
+    ): Double
 }

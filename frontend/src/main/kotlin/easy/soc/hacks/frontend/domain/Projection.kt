@@ -28,8 +28,6 @@ data class ProjectionId(
 class Projection(
     @Id
     @Column(name = "point_id", nullable = false)
-//    @GeneratedValue(strategy = GenerationType.IDENTITY, generator = "projections_point_id_seq")
-//    @SequenceGenerator(name = "projections_point_id_seq", initialValue = 1)
     val pointId: Long = 0,
 
     @Id
@@ -60,4 +58,10 @@ class Projection(
     @Column(name = "class_type", nullable = false)
     @Enumerated(EnumType.STRING)
     val classType: ProjectionClassType
+)
+
+data class ProjectionBatch(
+    val batchId: Long,
+    val projectionList: List<Projection>,
+    val duration: Double
 )

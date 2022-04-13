@@ -10,14 +10,20 @@
 
 <th:block th:fragment="collectAndShowMapScript">
     <script th:inline="javascript">
-        const xMin = -5
-        const xMax = 5
+        const xMin = -10
+        const xMax = 10
         const yMin = -5
         const yMax = 5
 
+        let nextBatchId = undefined
+
+        let batchIdFrameIdPointsDict = {}
+        let batchIdDurationDict = {}
+        let readyToProcessBatchSet = new Set()
+
         const canvas = document.getElementById("mapCanvas")
-        canvas.width = canvas.style.width
-        canvas.height = canvas.style.height
+        canvas.width = 600
+        canvas.height = 300
 
         const context = canvas.getContext("2d")
 
@@ -32,102 +38,147 @@
             )
         }
 
+        function drawPoint(x, y, radius) {
+            if (isPointOnCanvas([x, y])) {
+                const canvasX = (x - xMin) / (xMax - xMin) * canvas.width
+                const canvasY = (y - yMin) / (yMax - yMin) * canvas.height
+                const canvasRadius = radius / (xMax - xMin) * canvas.width
+
+                context.beginPath()
+                context.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI)
+                context.fill()
+            }
+        }
+
+        function drawFrame(resolve, batchId, frameId) {
+            clearCanvas()
+
+            for (let pointId in batchIdFrameIdPointsDict[batchId][frameId]) {
+                const point = batchIdFrameIdPointsDict[batchId][frameId][pointId]
+
+                const x = point[0]
+                const y = point[1]
+                const radius = point[2]
+
+                drawPoint(x, y, radius)
+            }
+
+            resolve()
+        }
+
+        async function drawBatch(batchId) {
+            const duration = batchIdDurationDict[batchId]
+
+            let timeoutList = []
+
+            for (let frameId in batchIdFrameIdPointsDict[batchId]) {
+                timeoutList.push(new Promise((resolve) => setTimeout(
+                    drawFrame,
+                    frameId * (1000.0 * duration / Object.keys(batchIdFrameIdPointsDict[batchId]).length),
+                    resolve,
+                    batchId,
+                    frameId
+                )))
+            }
+
+            for (let timeoutId in timeoutList) {
+                await timeoutList[timeoutId]
+            }
+        }
+
+        let nextBatchToProcess = undefined
+
+        async function processBatches() {
+            if (readyToProcessBatchSet.has(nextBatchToProcess)) {
+                readyToProcessBatchSet.delete(nextBatchToProcess)
+
+                await drawBatch(nextBatchToProcess)
+
+                delete batchIdFrameIdPointsDict[nextBatchToProcess]
+                delete batchIdDurationDict[nextBatchToProcess]
+
+                nextBatchToProcess++
+            }
+
+            setTimeout(processBatches, 0)
+        }
+
+        processBatches()
+
         function requestProjection() {
             const loadingGifXHR = new XMLHttpRequest()
             loadingGifXHR.open("GET", "/api/v1/session/projection")
+            loadingGifXHR.responseType = "json"
+
             loadingGifXHR.onload = (event) => {
-                const batchProjections = event.target.response
+                if (event.target.status === 200) {
+                    const response = event.target.response
 
-                if (batchProjections.length > 0) {
-                    let frameIdDict = {}
+                    const batchId = response["batchId"]
+                    const duration = response["duration"]
 
-                    for (let projection in batchProjections) {
-                        const frameId = projection["frameId"]
-                        const x = parseFloat(projection["x"])
-                        const y = parseFloat(projection["y"])
-                        const radius = parseFloat(projection["radius"])
-
-                        if (frameIdDict[frameId] === undefined) {
-                            frameIdDict[frameId] = []
+                    if (nextBatchId === undefined || nextBatchId === batchId) {
+                        if (nextBatchId === undefined) {
+                            nextBatchToProcess = batchId
                         }
 
-                        frameIdDict[frameId].push([x, y, radius])
-                    }
+                        nextBatchId = batchId + 1
 
-                    clearCanvas()
+                        batchIdDurationDict[batchId] = duration
+                        batchIdFrameIdPointsDict[batchId] = {}
 
-                    for (let frameId in frameIdDict) {
-                        for (let point in frameIdDict[frameId]) {
-                            const x = point[0]
-                            const y = point[1]
-                            const radius = point[2]
+                        for (let projectionId in response["projectionList"]) {
+                            const projection = response["projectionList"][projectionId]
 
-                            console.log(
-                                x,
-                                y,
-                                radius,
-                                isPointOnCanvas([x, y]),
-                                (x - xMin) / (xMax - xMin) * canvas.width,
-                                (y - yMin) / (yMax - yMin) * canvas.height
-                            )
+                            const frameId = projection["frameId"]
+                            const x = projection["x"]
+                            const y = projection["y"]
+                            const radius = projection["radius"]
 
-                            if (isPointOnCanvas([x, y])) {
-                                const canvasX = (x - xMin) / (xMax - xMin) * canvas.width
-                                const canvasY = (y - yMin) / (yMax - yMin) * canvas.height
-
-                                context.beginPath()
-                                context.arc(canvasX, canvasY, 2, 0, 2 * Math.PI)
-                                context.stroke()
+                            if (batchIdFrameIdPointsDict[batchId][frameId] === undefined) {
+                                batchIdFrameIdPointsDict[batchId][frameId] = []
                             }
+
+                            batchIdFrameIdPointsDict[batchId][frameId].push([x, y, radius])
                         }
                     }
+
+                    readyToProcessBatchSet.add(batchId)
+                } else {
                 }
             }
 
             loadingGifXHR.send()
         }
 
-        setInterval(
-            requestProjection,
-            1000
-        )
+        const videoIds = [[${videoList}]].map((video) => video.id)
 
-        // draw()
-        //
-        // async function draw() {
-        //     const points = new Map()
-        //     const pointCount = 10
-        //
-        //     while (true) {
-        //         context.clearRect(0, 0, width, height)
-        //
-        //         for (let i = 0; i < pointCount; i++) {
-        //             if (!points.has(i)) {
-        //                 points.set(i, [Math.random() * width, Math.random() * height, Math.random() * 2 - 1, Math.random() * 2 - 1])
-        //             } else {
-        //                 [x, y, vx, vy] = points.get(i)
-        //
-        //                 x += vx
-        //                 y += vy
-        //
-        //                 if (x < -10 || x > width + 10 || y < -10 || y > height + 10) {
-        //                     x = width - x
-        //                     y = height - y
-        //                 }
-        //
-        //                 points.set(i, [x, y, vx, vy])
-        //             }
-        //         }
-        //
-        //         for (let i = 0; i < pointCount; i++) {
-        //             context.beginPath();
-        //             [x, y, vx, vy] = points.get(i)
-        //             context.arc(x, y, 2, 0, 2 * Math.PI)
-        //             context.stroke()
-        //         }
-        //
-        //         await new Promise(resolve => setTimeout(resolve, 1000 / 30))
-        //     }
-        // }
+        let existFragmentCount = 0
+        function checkFragmentExists(videoId) {
+            const checkFragmentExistsXHR = new XMLHttpRequest()
+            checkFragmentExistsXHR.open("GET", "/api/v1/video/manifest/check?id=" + videoId)
+
+            checkFragmentExistsXHR.onload = (event) => {
+                if (event.target.status === 200 && event.target.response === "true") {
+                    existFragmentCount++
+
+                    if (existFragmentCount === videoIds.length) {
+                        setInterval(
+                            requestProjection,
+                            1000
+                        )
+                    }
+                } else if (event.target.status === 404) {
+                } else {
+                    setTimeout(checkFragmentExists, 1000, videoId)
+                }
+            }
+
+            checkFragmentExistsXHR.send()
+        }
+
+        videoIds.forEach(videoId => {
+            checkFragmentExists(videoId)
+        })
     </script>
 </th:block>

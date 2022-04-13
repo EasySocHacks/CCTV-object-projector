@@ -1,10 +1,7 @@
 package easy.soc.hacks.frontend.service
 
-import easy.soc.hacks.frontend.domain.Message
-import easy.soc.hacks.frontend.domain.MessageType
+import easy.soc.hacks.frontend.domain.*
 import easy.soc.hacks.frontend.domain.MessageType.ERROR
-import easy.soc.hacks.frontend.domain.StreamingType
-import easy.soc.hacks.frontend.domain.Video
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.stereotype.Service
@@ -43,9 +40,10 @@ class MessageService {
         httpSession: HttpSession,
         streamingType: StreamingType? = null,
         sessionId: String? = null,
-        video: Video? = null
+        video: Video? = null,
+        checkSession: Optional<Session> = sessionService.getActiveSession()
     ): Boolean {
-        val session = sessionService.getActiveSession().orElseGet { null }
+        val session = checkSession.orElseGet { null }
 
         when {
             session == null ->

@@ -2,6 +2,7 @@ package easy.soc.hacks.frontend.controller.rest
 
 import com.fasterxml.jackson.databind.JsonNode
 import easy.soc.hacks.frontend.domain.*
+import easy.soc.hacks.frontend.domain.SessionStatusType.DONE
 import easy.soc.hacks.frontend.domain.StreamingType.FILE
 import easy.soc.hacks.frontend.service.*
 import org.springframework.beans.factory.annotation.Autowired
@@ -140,31 +141,40 @@ class StreamingController {
     @GetMapping("session/projection")
     fun getProjection(
         httpSession: HttpSession
-    ): ResponseEntity<List<Projection>> {
+    ): ResponseEntity<ProjectionBatch> {
         try {
-            while (true) {
-                val session = sessionService.getStreamingSession().get()
+            val session = sessionService.getStreamingSession().get()
 
-                @Suppress("UNCHECKED_CAST")
-                val processedMapBatchIdSet = httpSession.getAttribute("processedMapBatchIdSet")
-                        as ConcurrentSkipListSet<Long>
+            @Suppress("UNCHECKED_CAST")
+            val processedMapBatchIdSet = httpSession.getAttribute("processedMapBatchIdSet")
+                    as ConcurrentSkipListSet<Long>
 
-                val nextBatchIdRef = httpSession.getAttribute("nextBatchId") as AtomicLong
-                val currentBatchId = nextBatchIdRef.get()
+            val nextBatchIdRef = httpSession.getAttribute("nextBatchId") as AtomicLong
+            val currentBatchId = nextBatchIdRef.get()
 
-                val projectionList = projectionService.findProjectionsByBatchIdAndSessionId(
-                    currentBatchId,
-                    session.id
+            val projectionList = projectionService.findProjectionsByBatchIdAndSessionId(
+                currentBatchId,
+                session.id
+            )
+
+            val duration = videoFragmentService.getDurationBySessionIdAndId(
+                session.id,
+                currentBatchId
+            )
+
+            processedMapBatchIdSet.add(currentBatchId)
+
+            Thread {
+                checkProcessedBatch(httpSession)
+            }.start()
+
+            return ResponseEntity.ok().body(
+                ProjectionBatch(
+                    batchId = currentBatchId,
+                    projectionList = projectionList,
+                    duration = duration
                 )
-
-                processedMapBatchIdSet.add(currentBatchId)
-
-                Thread {
-                    checkProcessedBatch(httpSession)
-                }.start()
-
-                return ResponseEntity.ok().body(projectionList)
-            }
+            )
         } catch (e: NoSuchElementException) {
             return ResponseEntity.status(NOT_FOUND).build()
         } catch (e: Exception) {
@@ -322,10 +332,28 @@ class StreamingController {
                 video.data
             )
         } catch (e: NoSuchElementException) {
-            println(e)
             return ResponseEntity.status(NOT_FOUND).build()
         } catch (e: Exception) {
-            println(e)
+            return ResponseEntity.status(INTERNAL_SERVER_ERROR).build()
+        }
+    }
+
+    @PostMapping("session/stop")
+    fun stopSession(): ResponseEntity<Unit> {
+        try {
+            val session = sessionService.getStreamingSession().get()
+
+            sessionService.save(
+                Session(
+                    id = session.id,
+                    startTime = session.startTime,
+                    status = DONE,
+                    streamingType = session.streamingType
+                )
+            )
+
+            return ResponseEntity.ok().build()
+        } catch (e: Exception) {
             return ResponseEntity.status(INTERNAL_SERVER_ERROR).build()
         }
     }

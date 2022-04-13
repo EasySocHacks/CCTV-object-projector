@@ -19,7 +19,8 @@ class BackendBrokerService {
             START_SESSION("START_SESSION"),
             APPEND_VIDEO("APPEND_VIDEO"),
             SET_CALIBRATION("SET_CALIBRATION"),
-            START_STREAMING("START_STREAMING");
+            START_STREAMING("START_STREAMING"),
+            STOP_SESSION("STOP_SESSION");
 
             override fun toString(): String = command
         }
@@ -30,6 +31,20 @@ class BackendBrokerService {
         val command = objectMapper.createObjectNode()
 
         command.put("command", START_SESSION.command)
+        command.put("sessionId", session.id)
+
+        webSocketSession?.sendMessage(
+            TextMessage(
+                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(command)
+            )
+        )
+    }
+
+    fun stopSession(webSocketSession: WebSocketSession?, session: Session) {
+        val objectMapper = ObjectMapper()
+        val command = objectMapper.createObjectNode()
+
+        command.put("command", STOP_SESSION.command)
         command.put("sessionId", session.id)
 
         webSocketSession?.sendMessage(

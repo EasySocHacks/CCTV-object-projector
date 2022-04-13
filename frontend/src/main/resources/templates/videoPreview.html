@@ -14,7 +14,7 @@
             </a>
         </div>
 
-        <form th:action="'/video/add'" method="get">
+        <form th:if="${currentSession.status.toString()} == 'ACTIVE'" th:action="'/video/add'" method="get">
             <input type="hidden" name="type" th:value="${param.get('type')}">
             <button class="addVideoButton" type="submit">+</button>
         </form>
@@ -39,7 +39,7 @@
         /*<![CDATA[*/
         const cfg = Hls.DefaultConfig
 
-        cfg["initialLiveManifestSize"] = 1
+        cfg["initialLiveManifestSize"] = 2
         cfg["backBufferLength"] = 0
         cfg["maxBufferHole"] = 0.0
         cfg["maxMaxBufferLength"] = 300
@@ -61,8 +61,9 @@
             function checkFragmentExists(videoId) {
                 const checkFragmentExistsXHR = new XMLHttpRequest()
                 checkFragmentExistsXHR.open("GET", "/api/v1/video/manifest/check?id=" + videoId)
+
                 checkFragmentExistsXHR.onload = (event) => {
-                    if (event.target.status === 200 && event.target.response === true) {
+                    if (event.target.status === 200 && event.target.response === "true") {
                         setVideo(videoId)
                     } else if (event.target.status === 404) {}
                     else {

@@ -38,15 +38,18 @@
                     <div id="mapPreview" th:include="mapPreview :: template"></div>
                 </th:block>
 
+                <div id="previewControls">
+                    <form th:if="${currentSession.status.toString()} == 'STREAMING'" method="post" action="/stop">
+                        <button class="previewControlButton" th:text="STOP"></button>
+                    </form>
+                    <form th:if="${currentSession.status.toString()} == 'ACTIVE'" method="post" action="/start">
+                        <button class="previewControlButton" th:text="START"></button>
+                    </form>
+                    <form th:if="${currentSession.status.toString()} == 'ACTIVE'" method="post" action="/delete">
+                        <button class="previewControlButton" th:text="DELETE"></button>
+                    </form>
+                </div>
                 <th:block th:switch="${currentSession.status.toString()}">
-                    <div id="previewControls">
-                        <form th:case="'STREAMING'" method="post" action="/stop">
-                            <button class="previewControlButton" th:text="STOP"></button>
-                        </form>
-                        <form th:case="'ACTIVE'" method="post" action="/start">
-                            <button class="previewControlButton" th:text="START"></button>
-                        </form>
-                    </div>
                 </th:block>
             </th:block>
 

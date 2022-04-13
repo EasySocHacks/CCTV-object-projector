@@ -53,5 +53,5 @@ class Video(
     val streamingType: StreamingType,
 
     @Column(name = "data", nullable = true)
-    val data: ByteArray? = null
+    var data: ByteArray? = null
 )

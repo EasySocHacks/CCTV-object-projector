@@ -70,7 +70,7 @@ class VideoController {
                 httpSession.setAttribute(
                     "nextBatchId",
                     when (maxVideoFragmentId) {
-                        null -> AtomicLong(0)
+                        null -> AtomicLong(1)
                         else -> AtomicLong(maxVideoFragmentId)
                     }
                 )
@@ -86,7 +86,11 @@ class VideoController {
 
                 model.addAttribute(
                     "videoList",
-                    videoService.findVideosBySessionId(session.id)
+                    videoService.findVideosBySessionId(session.id).map {
+                        it.apply {
+                            data = null
+                        }
+                    }
                 )
             } else {
                 messageService.sendMessage(
@@ -314,6 +318,78 @@ class VideoController {
                 streamingType = session.streamingType
             )
         )
+
+        return "redirect:/video/preview?type=${session.streamingType.value}"
+    }
+
+    private fun endSession(session: Session) {
+        backendBrokerService.stopSession(activeBackendWebSocketSession, session)
+
+        sessionService.save(
+            Session(
+                id = session.id,
+                startTime = session.startTime,
+                status = DONE,
+                streamingType = session.streamingType
+            )
+        )
+    }
+
+    @PostMapping("stop")
+    fun stop(
+        httpSession: HttpSession
+    ): String {
+        if (!messageService.isAccessGranted(
+                httpSession = httpSession,
+                checkSession = sessionService.getStreamingSession()
+            )
+        ) {
+            return "redirect:/"
+        }
+
+        val session = sessionService.getStreamingSession().orElseGet { null }
+
+        if (activeBackendWebSocketSession == null) {
+            messageService.sendMessage(
+                httpSession,
+                "message.backend.is.disable",
+                ERROR
+            )
+
+            return "redirect:/video/preview?type=${session.streamingType.value}"
+        }
+
+        endSession(session)
+
+        return "redirect:/video/preview?type=${session.streamingType.value}"
+    }
+
+    @PostMapping("delete")
+    fun deleteSession(
+        httpSession: HttpSession
+    ): String {
+        if (!messageService.isAccessGranted(
+                httpSession = httpSession,
+            )
+        ) {
+            return "redirect:/"
+        }
+
+        val session = sessionService.getActiveSession().orElseGet { null }
+
+        if (activeBackendWebSocketSession == null) {
+            messageService.sendMessage(
+                httpSession,
+                "message.backend.is.disable",
+                ERROR
+            )
+
+            return "redirect:/video/preview?type=${session.streamingType.value}"
+        }
+
+        backendBrokerService.stopSession(activeBackendWebSocketSession, session)
+
+        endSession(session)
 
         return "redirect:/video/preview?type=${session.streamingType.value}"
     }

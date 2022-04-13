@@ -50,16 +50,12 @@ class VideoFragmentService {
             )
         }
 
-        if (ids.size < 2) {
-            throw IllegalStateException()
-        }
-
         val manifestTextStringBuffer = StringBuilder()
 
         manifestTextStringBuffer.append("#EXTM3U\n")
         manifestTextStringBuffer.append("#EXT-X-VERSION:3\n")
         manifestTextStringBuffer.append("#EXT-X-MEDIA-SEQUENCE:${ids[0]}\n")
-        manifestTextStringBuffer.append("#EXT-X-TARGETDURATION:5\n")
+        manifestTextStringBuffer.append("#EXT-X-TARGETDURATION:${durations.maxOf { it }}\n")
         for (i in 0 until ids.size) {
             manifestTextStringBuffer.append(
                 "#EXTINF:${durations[i]},\n/api/v1/video/fragment?id=$videoId&fragment=${ids[i]}\n"
@@ -103,6 +99,11 @@ class VideoFragmentService {
     fun checkExistsVideoFragmentBySessionIdAndVideoId(
         sessionId: String,
         videoId: Long
-    ) = videoFragmentRepository.existsBySessionIdAndVideoId(sessionId, videoId)
+    ) = videoFragmentRepository.countBySessionIdAndVideoId(sessionId, videoId) >= 2
+
+    fun getDurationBySessionIdAndId(
+        sessionId: String,
+        id: Long
+    ) = videoFragmentRepository.getDurationBySessionIdAndId(sessionId, id)
 }
 
