@@ -30,17 +30,13 @@ class Detectron2Detector(Detector):
         return bboxes, classes, scores
 
     @staticmethod
-    def decode_class(class_id: int):
-        if class_id < 0 or class_id >= len(classes_names):
-            return None
-        else:
-            return classes_names[class_id]
+    def model_from_str(model_name, model_weight_path=None):
+        weights = model_weight_path
+        if weights is None:
+            weights = model_zoo.get_checkpoint_url("{}.yaml".format(model_name))
 
-
-class Detectron2MaskRCNN(Detectron2Detector):
-    def __init__(self, device):
-        super().__init__(
+        return lambda device: Detectron2Detector(
             device,
-            "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
-            model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml")
+            "{}.yaml".format(model_name),
+            weights
         )

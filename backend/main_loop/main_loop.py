@@ -104,8 +104,11 @@ class MainLoop:
         self._logger.debug(
             "Sending screenshot of video with id '{}' for session with id '{}'".format(video_id, session_id))
 
+        method = "http"
+        if self.config.secure:
+            method = "https"
         requests.post("{}://{}:{}/api/v{}/video/screenshot?id={}&session={}".format(
-            self.config.method,
+            method,
             self.config.host,
             self.config.port,
             self.config.api_version,

@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from detector.object_class import ObjectClassType
@@ -8,6 +9,11 @@ class Projector:
         self.config = config
 
         self._frame_id_projection_dict = {}
+
+        self._previous_projections_dict = {
+            ObjectClassType.PERSON.value: np.array([]),
+            ObjectClassType.CAR.value: np.array([])
+        }
 
     def append_projection_class_list(self, video_id, frame_id, projection_class_idx_array):
         if frame_id not in self._frame_id_projection_dict:

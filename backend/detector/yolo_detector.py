@@ -4,11 +4,14 @@ from detector import Detector
 
 
 class YoloDetector(Detector):
-    def __init__(self, device, yolo_version):
+    def __init__(self, device, yolo_version, model_weight_path=None):
         super().__init__(device)
 
         self.yolo_version = yolo_version
         self.model = torch.hub.load('ultralytics/yolov5', self.yolo_version, pretrained=True)
+        if model_weight_path is not None:
+            self.model.load_state_dict(torch.load(model_weight_path, map_location=device))
+
         self.model.to(device)
         self.model.share_memory()
         self.model.eval()
@@ -24,30 +27,9 @@ class YoloDetector(Detector):
         return bboxes, classes, scores
 
     @staticmethod
-    def decode_class(class_id: int):
-        pass
-
-
-class YoloDetectorN(YoloDetector):
-    def __init__(self, device):
-        super().__init__(device, "yolov5n")
-
-
-class YoloDetectorS(YoloDetector):
-    def __init__(self, device):
-        super().__init__(device, "yolov5s")
-
-
-class YoloDetectorM(YoloDetector):
-    def __init__(self, device):
-        super().__init__(device, "yolov5m")
-
-
-class YoloDetectorL(YoloDetector):
-    def __init__(self, device):
-        super().__init__(device, "yolov5l")
-
-
-class YoloDetectorX(YoloDetector):
-    def __init__(self, device):
-        super().__init__(device, "yolov5x")
+    def model_from_str(model_name, model_weight_path=None):
+        return lambda device: YoloDetector(
+            device,
+            model_name,
+            model_weight_path
+        )

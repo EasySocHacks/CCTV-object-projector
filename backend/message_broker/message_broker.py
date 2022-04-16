@@ -37,8 +37,11 @@ class MessageBroker:
         self._logger.info("MessageBroker killed")
 
     async def _work(self):
+        method = "ws"
+        if self.config.secure:
+            method = "wss"
         async with websockets.connect(
-                "ws://{}:{}/backend/websocket".format(self.config.host, self.config.port)
+                "{}://{}:{}/backend/websocket".format(method, self.config.host, self.config.port)
         ) as websocket:
             self._logger.info("Establish websocket connection with frontend")
 
@@ -55,8 +58,11 @@ class MessageBroker:
     def _download_video(self, video_id, path):
         self._logger.info("Start downloading video with id '{}'".format(video_id))
 
+        method = "http"
+        if self.config.secure:
+            method = "https"
         response = requests.get("{}://{}:{}/api/v{}/{}".format(
-            self.config.method,
+            method,
             self.config.host,
             self.config.port,
             self.config.api_version,

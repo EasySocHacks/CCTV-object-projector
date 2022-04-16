@@ -103,8 +103,11 @@ class ProcessorLinker:
 
                 tmp_file_mp4.close()
 
+        method = "http"
+        if self.config.secure:
+            method = "https"
         response = requests.post("{}://{}:{}/api/v{}/session/batch/{}".format(
-            self.config.method,
+            method,
             self.config.host,
             self.config.port,
             self.config.api_version,
@@ -190,8 +193,11 @@ class ProcessorLinker:
 
             next_iteration_id += 1
 
+        method = "http"
+        if self.config.secure:
+            method = "https"
         requests.post("{}://{}:{}/api/v{}/session/stop".format(
-            self.config.method,
+            method,
             self.config.host,
             self.config.port,
             self.config.api_version

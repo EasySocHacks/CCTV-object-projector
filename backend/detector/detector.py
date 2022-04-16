@@ -11,5 +11,5 @@ class Detector(ABC):
 
     @staticmethod
     @abstractmethod
-    def decode_class(class_id: int):
+    def model_from_str(model_name, model_weight_path=None):
         pass

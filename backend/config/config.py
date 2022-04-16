@@ -5,11 +5,11 @@ class Config:
     def __init__(self):
         self._logger = get_logger()
 
-        self.method = "http"
-
         self.host = "localhost"
 
         self.port = 4000
+
+        self.secure = False
 
         self.token = None
 
@@ -19,15 +19,17 @@ class Config:
 
         self.stride_between_send = 60
 
-        self.available_devices = ["cuda:0"]
+        self.available_devices = ["cpu"]
 
         self.detector_type = None
 
-        self.detection_threshold = 0.65
+        self.detector_weight_path = None
+
+        self.detector_threshold = 0.65
 
         self.bbox_expander_type = None
 
-        self.screenshot_stride = 1800
+        self.bbox_expander_weight_path = "data/bbox_expander/weight/model_final.pth"
 
         self.fps = 30
 

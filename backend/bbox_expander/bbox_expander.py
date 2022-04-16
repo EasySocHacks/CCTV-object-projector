@@ -5,7 +5,7 @@ from bbox_expander import BboxExpandNet
 
 
 class BboxExpander:
-    def __init__(self, device):
+    def __init__(self, device, model_weight_path):
         self.device = torch.device(device)
 
         self.data_transforms = transforms.Compose([
@@ -14,12 +14,12 @@ class BboxExpander:
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
 
-        self.weight_path = "data/bbox_expander/weight/model_final.pth"
+        self.model_weight_path = model_weight_path
 
         self.model = BboxExpandNet()
         self.model.to(self.device)
         self.model.share_memory()
-        self.model.load_state_dict(torch.load(self.weight_path, map_location=torch.device(self.device)))
+        self.model.load_state_dict(torch.load(self.model_weight_path, map_location=self.device))
         self.model.eval()
 
     def expand(self, image):
@@ -42,3 +42,7 @@ class BboxExpander:
         ny = expand[3] * (nh / 2.0) + y
 
         return [nx - nw / 2.0, ny - nh / 2.0, nx + nw / 2.0, ny + nh / 2.0]
+
+    @staticmethod
+    def get_model(model_weight_path):
+        return lambda device: BboxExpander(device, model_weight_path)

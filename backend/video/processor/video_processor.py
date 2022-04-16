@@ -100,7 +100,7 @@ class VideoProcessor:
                     if obj_class != ObjectClassType.PERSON.value and obj_class != ObjectClassType.CAR.value:
                         continue
 
-                    if obj_score < self.config.detection_threshold:
+                    if obj_score < self.config.detector_threshold:
                         continue
 
                     tracker_class_list.append((idx, dlib.correlation_tracker(), obj_class))
