@@ -259,3 +259,85 @@ docker-compose run backend --host localhost --port 4000 --detector COCO-Instance
 ```shell
 docker-compose run --gpus=all backend --host localhost --port 4000 --detector yolov5x --devices cuda:0 cuda:1
 ```
+
+### Команды backend
+[frontend](../frontend) общается с данным сервисам при помощи команд по websocker соединению.
+Здесь представлен список команд, которе готов обрабатывать [backend](/)
+<br>
+Команды приходят в формате `json`. Тип команды задан в поле `command`.
+
+#### START_SESSION
+
+```json
+{
+  "command": "START_SESSION",
+  "sessionId": ... // ID сессии
+}
+```
+Полчает нотификацию от [frontend](../frontend) о том, что сессия с ID `sessionId` была запущена.
+
+#### APPEND_VIDEO
+
+```json
+{
+  "command": "APPEND_VIDEO",
+  "videoId": ..., // ID видео
+  "sessionId": ..., // ID сессии
+  "uri": ..., // Пусть до видео
+  "streamingType": ... // Тип стриминга
+}
+```
+Добавляет видео к списку обрабатываемых.
+<br>
+Команда дожна приходить после команды START_SESSION.
+<br>
+`sessionId` у данный команды и команды `START_SESSION` должны совпадать.
+
+Типа стриминга ожидается, либо `CAMERA` для обработки видео с камер в реальном времени,
+либо `FILE` для обработки видео из файла.
+<br>
+Если тип стриминга `CAMERA`, то в `uri` содержится ссылка до видео потока камеры.
+<br>
+Если тип стриминга `FILE`, то в `uri` содержится ссылка для скачивания видеофайла.
+
+#### SET_CALIBRATION
+
+```json
+{
+  "command": "SET_CALIBRATION",
+  "videoId": ... // ID видео,
+  "calibrationPointList": [{
+    "xScreen": ..., // Координата X на изображении
+    "yScreen": ..., // Координата Y на изображении
+    "xWorld": ..., // Координата X в пространстве
+    "yWorld": ..., // Координата Y в пространтсве
+    "zWorld": ... // Координата Z в пространстве
+  },
+  ...
+  ]
+}
+```
+Определяет точки калибрации камры с ID `videoId`. 
+<br>
+Данная команда должна приходить после того, как видео с ID `videoId` было
+добавлено командой `APPEND_VIDEO`.
+
+#### START_STREAMING
+
+```json
+{
+  "command": "START_STREAMING"
+}
+```
+Запускает обработку видео файлов, полученый в командах `APPEND_VIDEO`.
+
+#### STOP_SESSION
+
+```json
+{
+  "command": "STOP_SESSION",
+  "sessionId": ... // ID сессии
+}
+```
+Останавливает сессию с ID `sessionId` и все, что с ней связано.
+`sessionId` должна совпадать с тем, что пришло в `START_SESSION`.
