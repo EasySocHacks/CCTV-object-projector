@@ -8,7 +8,7 @@ Backend сервис предназначен для обработки запр
 Для сборки и запуска сервиса используются [docker](https://www.docker.com/) и [docker-compose](https://docs.docker.com/compose/).
 Убедитесь, что данные приложения установлены на вашем устройстве.
 
-Чтобы собрать сервис, из [текущей дериктории](/), команду слудующего вида:
+Чтобы собрать сервис, из [текущей дериктории](/), запустите команду слудующего вида:
 ```shell
 docker-compose build --build-arg DEVICE=... --build-arg CUDA_VERSION=...
 ```
@@ -40,14 +40,14 @@ docker-compose build --build-arg DEVICE=... --build-arg CUDA_VERSION=...
 docker-compose build --build-arg DEVICE=cpu
 ```
 
-Если для рабоыт будет использована `cuda` версии `11.3` или выше,
+Если для рабоыт будет использована `cuda`, например, версии `11.1` или выше,
 собрать проект можно при помощи команды:
 ```shell
-docker-compose build --build-arg DEVICE=cuda --build-arg CUDA_VERSION=11.3
+docker-compose build --build-arg DEVICE=cuda --build-arg CUDA_VERSION=11.1
 ```
 
 Сборку сервиса требуется производить только при первом запуску проекта. 
-При последующих запусках пропус пропскайте данный пункт.
+При последующих запусках пропскайте данный пункт.
 
 ### Запуск сервиса
 После завершения сборки, или при последующих запусках, для старта сервиса запустите команду следующего вида:
@@ -108,9 +108,10 @@ docker-compose run [--gpus=all] backend [args ...]
 Значения указываются в виде `cpu` или `cuda:x`, где `x` - номер девайса с `cuda`.
 <br>
 Возможно указать несколько девайсов через пробел. 
-В таком случае вся раюота будет распределена между ними.
+В таком случае вся работа будет распределена между ними.
 
 Обязательный: Нет
+<br>
 Значение по умолчанию: cpu
 
 #### --detector
@@ -163,7 +164,7 @@ COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x
 #### --detector_weights
 Задает путь до кастомных весов, которые будут использоваться в детектове (см. `--detector`).
 <br>
-Если Вы собираетесь использовать стандартные веса пердобеченой модели,
+Если Вы собираетесь использовать стандартные веса предобученной модели,
 не задавайте данный аргумент.
 
 Обязателбный: Нет
@@ -178,17 +179,18 @@ COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x
 #### --bbox_expander или --expander
 Включает модель BBoxExpander.
 <br>
-Если данный аргумент не задан, то данная модель не будет использоваться приработе сервиса.
+Если данный аргумент не задан, то данная модель не будет использоваться при работе сервиса.
 
 Обязателный: Нет
 
 #### --bbox_expander_weights или --expander_weights
 Задает путь до кастомных весов, которые будут использоваться в моделе BBoxExpander.
 <br>
-Если Вы собираетесь использовать стандартные веса предобученой модели,
+Если Вы собираетесь использовать стандартные веса предобученной модели,
 не задавайте данный аргумент
 
 Обязательный: Нет
+<br>
 Значение по умолчанию: data/bbox_expander/weight/model_final.pth
 
 #### --fps
@@ -268,17 +270,17 @@ docker-compose run --gpus=all backend --host localhost --port 4000 --detector yo
 
 #### START_SESSION
 
-```json
+```shell
 {
   "command": "START_SESSION",
   "sessionId": ... // ID сессии
 }
 ```
-Полчает нотификацию от [frontend](../frontend) о том, что сессия с ID `sessionId` была запущена.
+Получает нотификацию от [frontend](../frontend) о том, что сессия с ID `sessionId` была запущена.
 
 #### APPEND_VIDEO
 
-```json
+```shell
 {
   "command": "APPEND_VIDEO",
   "videoId": ..., // ID видео
@@ -302,7 +304,7 @@ docker-compose run --gpus=all backend --host localhost --port 4000 --detector yo
 
 #### SET_CALIBRATION
 
-```json
+```shell
 {
   "command": "SET_CALIBRATION",
   "videoId": ... // ID видео,
@@ -324,7 +326,7 @@ docker-compose run --gpus=all backend --host localhost --port 4000 --detector yo
 
 #### START_STREAMING
 
-```json
+```shell
 {
   "command": "START_STREAMING"
 }
@@ -333,7 +335,7 @@ docker-compose run --gpus=all backend --host localhost --port 4000 --detector yo
 
 #### STOP_SESSION
 
-```json
+```shell
 {
   "command": "STOP_SESSION",
   "sessionId": ... // ID сессии
