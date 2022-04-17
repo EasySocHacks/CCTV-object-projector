@@ -1,5 +1,5 @@
 import argparse
-from logging import INFO
+from logging import INFO, DEBUG, ERROR
 
 import torch
 from torch.multiprocessing import log_to_stderr, set_start_method
@@ -11,7 +11,6 @@ from message_broker import MessageBroker
 
 def main():
     set_start_method("spawn", True)
-    log_to_stderr(INFO)
 
     torch.hub.set_dir("data/torch/hub")
 
@@ -194,6 +193,20 @@ def main():
         required=False,
         help="set number of processes which will be processing videos"
     )
+    argument_parser.add_argument(
+        "--logger_type",
+        "--logger",
+        metavar="type",
+        type=str,
+        default=config.logger_type,
+        choices=[
+            "INFO",
+            "DEBUG",
+            "ERROR"
+        ],
+        required=False,
+        help="set logger print type"
+    )
 
     args = argument_parser.parse_args()
 
@@ -217,6 +230,12 @@ def main():
     config.car_radius = args.car_radius
     config.save_file_video_dir = args.download
     config.video_processor_count = args.processes
+    if args.logger_type == "INFO":
+        config.logger_type = log_to_stderr(INFO)
+    if args.logger_type == "DEBUG":
+        config.logger_type = log_to_stderr(DEBUG)
+    if args.logger_type == "ERROR":
+        config.logger_type = log_to_stderr(ERROR)
 
     message_broker = MessageBroker(config)
     message_broker.start()

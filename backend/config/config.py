@@ -41,6 +41,8 @@ class Config:
 
         self.video_processor_count = 1
 
+        self.logger_type = "INFO"
+
     def assert_correct(self):
         if self.stride_between_send % self.stride_between_detection != 0:
             self._logger.error("'stride_between_send' must be dividable by 'stride_between_detection'")
