@@ -1,4 +1,4 @@
 FROM gradle
-EXPOSE 4000
+EXPOSE ${FRONTEND_PORT}
 COPY . .
 CMD gradle bootRun
