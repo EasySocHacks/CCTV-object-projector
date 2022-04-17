@@ -1,0 +1,14 @@
+version: "3.0"
+services:
+  postgres:
+    image: postgres
+    network_mode: host
+    environment:
+      - POSTGRES_PASSWORD=123
+
+  frontend:
+    image: cctv_frontend
+    build: .
+    network_mode: host
+    depends_on:
+      - postgres
