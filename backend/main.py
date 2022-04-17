@@ -6,8 +6,6 @@ from torch.multiprocessing import log_to_stderr, set_start_method
 
 from bbox_expander import BboxExpander
 from config import Config
-from detector import YoloDetector
-from detector.detectron2_detector import Detectron2Detector
 from message_broker import MessageBroker
 
 
@@ -207,10 +205,7 @@ def main():
     config.stride_between_send = args.stride_send
     config.available_devices = args.devices
     config.detector_weight_path = args.detector_weights
-    if args.detector.startswith("yolov5"):
-        config.detector_type = YoloDetector.model_from_str(args.detector, config.detector_weight_path)
-    else:
-        config.detector_type = Detectron2Detector.model_from_str(args.detector, config.detector_weight_path)
+    config.detector_type = args.detector
     config.detector_threshold = args.detector_threshold
     config.bbox_expander_weight_path = args.bbox_expander_weights
     if args.bbox_expander is not None:

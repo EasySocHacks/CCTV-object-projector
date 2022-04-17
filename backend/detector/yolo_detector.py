@@ -25,11 +25,3 @@ class YoloDetector(Detector):
         bboxes = df.iloc[:, 0:4].to_numpy()
 
         return bboxes, classes, scores
-
-    @staticmethod
-    def model_from_str(model_name, model_weight_path=None):
-        return lambda device: YoloDetector(
-            device,
-            model_name,
-            model_weight_path
-        )

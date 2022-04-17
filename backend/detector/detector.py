@@ -8,8 +8,3 @@ class Detector(ABC):
     @abstractmethod
     def detect(self, image):
         pass
-
-    @staticmethod
-    @abstractmethod
-    def model_from_str(model_name, model_weight_path=None):
-        pass

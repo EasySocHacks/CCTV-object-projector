@@ -28,15 +28,3 @@ class Detectron2Detector(Detector):
         scores = output["instances"].scores.cpu()
 
         return bboxes, classes, scores
-
-    @staticmethod
-    def model_from_str(model_name, model_weight_path=None):
-        weights = model_weight_path
-        if weights is None:
-            weights = model_zoo.get_checkpoint_url("{}.yaml".format(model_name))
-
-        return lambda device: Detectron2Detector(
-            device,
-            "{}.yaml".format(model_name),
-            weights
-        )

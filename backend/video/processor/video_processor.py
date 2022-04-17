@@ -2,9 +2,12 @@ import cv2
 import dlib
 import numpy as np
 from PIL import Image
+from detectron2 import model_zoo
 from torch.multiprocessing import Queue, Process, get_logger
 
 from bbox_expander import BboxExpander
+from detector import YoloDetector
+from detector.detectron2_detector import Detectron2Detector
 from detector.object_class.object_class_type import ObjectClassType
 
 
@@ -22,7 +25,21 @@ class VideoProcessor:
 
         self.queue = Queue()
 
-        self._detector = self.config.detector_type(device)
+        if self.config.detector_type.startswith("yolov5"):
+            self._detector = YoloDetector(
+                device,
+                self.config.detector_type,
+                self.config.detector_weight_path
+            )
+        else:
+            weights = self.config.detector_weight_path
+            if weights is None:
+                weights = model_zoo.get_checkpoint_url("{}.yaml".format(self.config.detector_type))
+            self._detector = Detectron2Detector(
+                device,
+                "{}.yaml".format(self.config.detector_type),
+                weights
+            )
         if self.config.bbox_expander_type is None:
             self._bbox_expander = None
         else:
