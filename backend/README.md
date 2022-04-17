@@ -343,3 +343,10 @@ docker-compose run --gpus=all backend --host localhost --port 4000 --detector yo
 ```
 Останавливает сессию с ID `sessionId` и все, что с ней связано.
 `sessionId` должна совпадать с тем, что пришло в `START_SESSION`.
+
+### BBoxExpander
+Для работы с моделью BBoxExpander, потребуется скачать веса по [ссыке](https://disk.yandex.ru/d/reUVaPoGcBbJ5Q) 
+и разместить данный файл в папку, которую Вы собираетесь указать в `--bbox_expander_weights`.
+<br>
+Изначально это папка `data/bbox_expander/weight/model_final.pth`, поэтому, 
+если Вы не собираетесь изменять данный алгумент, поместите веса туда.
