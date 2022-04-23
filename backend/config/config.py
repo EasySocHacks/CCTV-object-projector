@@ -35,7 +35,15 @@ class Config:
 
         self.person_radius = 0.2
 
+        self.person_mean_height = 1.65
+
+        self.person_mean_velocity_in_dist_per_sec = 0.7
+
         self.car_radius = 0.75
+
+        self.car_mean_height = 2.15
+
+        self.car_mean_velocity_in_dist_per_sec = 1.8
 
         self.save_file_video_dir = "data/video"
 
@@ -47,3 +55,9 @@ class Config:
         if self.stride_between_send % self.stride_between_detection != 0:
             self._logger.error("'stride_between_send' must be dividable by 'stride_between_detection'")
             raise Exception()
+
+    def person_mean_distance_per_frame(self):
+        return self.person_mean_velocity_in_dist_per_sec / self.fps
+
+    def car_mean_distance_per_frame(self):
+        return self.car_mean_velocity_in_dist_per_sec / self.fps

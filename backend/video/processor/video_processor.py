@@ -85,6 +85,7 @@ class VideoProcessor:
 
         self._logger.info("VideoProcessor stopped")
 
+    # noinspection DuplicatedCode
     def _process_batch(self, processor_linker_queue, video_id, batch):
         expand_list = []
         tracker_class_list = []
@@ -148,10 +149,27 @@ class VideoProcessor:
 
                         expand_list.append(None)
 
+                    mean_height = 0.0
+                    if obj_class == ObjectClassType.PERSON.value:
+                        mean_height = self.config.person_mean_height
+                    if obj_class == ObjectClassType.CAR.value:
+                        mean_height = self.config.car_mean_height
+
                     if self.video_dict[video_id].camera.calibration is not None:
-                        projection = self.video_dict[video_id].camera.calibration.project_2d_to_3d_homo(
-                            np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[3]])
+                        bottom_point_3d = self.video_dict[video_id].camera.calibration.project_2d_to_3d(
+                            np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[3]]),
+                            Z=0
                         )
+                        top_point_3d = self.video_dict[video_id].camera.calibration.project_2d_to_3d(
+                            np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[3]]),
+                            Z=mean_height
+                        )
+                        top_point_projection_3d = np.array([
+                            top_point_3d[0],
+                            top_point_3d[1],
+                            0
+                        ])
+                        projection = bottom_point_3d + np.linalg.norm(top_point_projection_3d - bottom_point_3d) / 2.0
                         projection_class_idx_array = np.append(
                             projection_class_idx_array,
                             np.append(projection, [obj_class, idx]).reshape((1, 5)),
@@ -176,10 +194,27 @@ class VideoProcessor:
                     else:
                         final_bbox = bbox
 
+                    mean_height = 0.0
+                    if obj_class == ObjectClassType.PERSON.value:
+                        mean_height = self.config.person_mean_height
+                    if obj_class == ObjectClassType.CAR.value:
+                        mean_height = self.config.car_mean_height
+
                     if self.video_dict[video_id].camera.calibration is not None:
-                        projection = self.video_dict[video_id].camera.calibration.project_2d_to_3d_homo(
-                            np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[3]])
+                        bottom_point_3d = self.video_dict[video_id].camera.calibration.project_2d_to_3d(
+                            np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[3]]),
+                            Z=0
                         )
+                        top_point_3d = self.video_dict[video_id].camera.calibration.project_2d_to_3d(
+                            np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[3]]),
+                            Z=mean_height
+                        )
+                        top_point_projection_3d = np.array([
+                            top_point_3d[0],
+                            top_point_3d[1],
+                            0
+                        ])
+                        projection = bottom_point_3d + np.linalg.norm(top_point_projection_3d - bottom_point_3d) / 2.0
                         projection_class_idx_array = np.append(
                             projection_class_idx_array,
                             np.append(projection, [obj_class, idx]).reshape((1, 5)),

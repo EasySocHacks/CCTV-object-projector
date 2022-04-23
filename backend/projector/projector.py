@@ -23,18 +23,6 @@ class Projector:
 
     def get_json_batch(self):
         result = []
-
-        # for batch_id in range(self.config.stride_between_send / self.config.stride_between_detection):
-        #     for video_id in self._video_id_projections:
-        #         # if self._video_id_projections[video_id][batch_id * self.config.stride_between_detection].shape[0] > 0:
-        #         #     point_count = \
-        #         #         np.max(self._video_id_projections[video_id][batch_id * self.config.stride_between_detection][:, 3])
-        #         # else:
-        #         #     point_count = 0
-        #
-        #         for frame_id in range(self.config.stride_between_detection):
-        #
-
         for frame_id in self._frame_id_projection_dict:
             result.append({
                 "frameId": frame_id,
