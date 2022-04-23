@@ -106,11 +106,11 @@
         processBatches()
 
         function requestProjection() {
-            const loadingGifXHR = new XMLHttpRequest()
-            loadingGifXHR.open("GET", "/api/v1/session/projection")
-            loadingGifXHR.responseType = "json"
+            const projectionXHR = new XMLHttpRequest()
+            projectionXHR.open("GET", "/api/v1/session/projection")
+            projectionXHR.responseType = "json"
 
-            loadingGifXHR.onload = (event) => {
+            projectionXHR.onload = (event) => {
                 if (event.target.status === 200) {
                     const response = event.target.response
 
@@ -148,7 +148,7 @@
                 }
             }
 
-            loadingGifXHR.send()
+            projectionXHR.send()
         }
 
         const videoIds = [[${videoList}]].map((video) => video.id)
