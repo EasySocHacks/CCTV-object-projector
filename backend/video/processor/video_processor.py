@@ -85,6 +85,7 @@ class VideoProcessor:
 
         self._logger.info("VideoProcessor stopped")
 
+    # noinspection DuplicatedCode
     def _process_batch(self, processor_linker_queue, video_id, batch):
         expand_list = []
         tracker_class_list = []
@@ -149,8 +150,9 @@ class VideoProcessor:
                         expand_list.append(None)
 
                     if self.video_dict[video_id].camera.calibration is not None:
-                        projection = self.video_dict[video_id].camera.calibration.project_2d_to_3d_homo(
-                            np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[3]])
+                        projection = self.video_dict[video_id].camera.calibration.project_2d_to_3d(
+                            np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[3]]),
+                            Z=0
                         )
                         projection_class_idx_array = np.append(
                             projection_class_idx_array,
@@ -177,8 +179,9 @@ class VideoProcessor:
                         final_bbox = bbox
 
                     if self.video_dict[video_id].camera.calibration is not None:
-                        projection = self.video_dict[video_id].camera.calibration.project_2d_to_3d_homo(
-                            np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[3]])
+                        projection = self.video_dict[video_id].camera.calibration.project_2d_to_3d(
+                            np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[3]]),
+                            Z=0
                         )
                         projection_class_idx_array = np.append(
                             projection_class_idx_array,
