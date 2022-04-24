@@ -35,15 +35,7 @@ class Config:
 
         self.person_radius = 0.2
 
-        self.person_mean_height = 1.65
-
-        self.person_mean_velocity_in_dist_per_sec = 0.7
-
         self.car_radius = 0.75
-
-        self.car_mean_height = 2.15
-
-        self.car_mean_velocity_in_dist_per_sec = 1.8
 
         self.save_file_video_dir = "data/video"
 
