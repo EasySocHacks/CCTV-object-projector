@@ -154,12 +154,11 @@ class Projector:
                     projections = projections_dict[cls]["projections"]
                     projection_cnt = projections_dict[cls]["projection_cnt"]
 
+                    mean_distance_per_frame = 0.0
                     if cls == ObjectClassType.PERSON.value:
                         mean_distance_per_frame = self.config.person_mean_distance_per_frame()
                     if cls == ObjectClassType.CAR.value:
                         mean_distance_per_frame = self.config.car_mean_distance_per_frame()
-                    else:
-                        mean_distance_per_frame = 0.0
 
                     dist_matrix = np.linalg.norm(
                         np.repeat([previous_projections], projection_cnt, axis=0).reshape(
