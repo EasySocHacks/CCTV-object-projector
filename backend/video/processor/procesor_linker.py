@@ -43,11 +43,11 @@ class ProcessorLinker:
         self._logger.debug("Prepare to send sequence with id '{}'".format(sequence_id))
 
         fragments_json = []
+        frame_id_video_id_dict = {}
 
         for video_id in batches:
             video_batch = batches[video_id]
 
-            fps = int(self.video_meta[video_id]["fps"])
             width = int(self.video_meta[video_id]["width"])
             height = int(self.video_meta[video_id]["height"])
 
@@ -63,8 +63,10 @@ class ProcessorLinker:
                     if frame is not None:
                         writer.write(frame)
 
-                    if projection_class_idx_array is not None:
-                        self._projector.append_projection_class_list(video_id, frame_id, projection_class_idx_array)
+                    if frame_id not in frame_id_video_id_dict:
+                        frame_id_video_id_dict[frame_id] = {}
+
+                    frame_id_video_id_dict[frame_id][video_id] = projection_class_idx_array
 
                 writer.release()
 
@@ -114,7 +116,7 @@ class ProcessorLinker:
             sequence_id + 1,
         ), json={
             "fragments": fragments_json,
-            "projections": self._projector.get_json_batch()
+            "projections": self._projector.get_next_projection_batch(frame_id_video_id_dict)
         })
 
         self._logger.debug("Sent batch '{}' to frontend with response '{}".format(sequence_id, response))
