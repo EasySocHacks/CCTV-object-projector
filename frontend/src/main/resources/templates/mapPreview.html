@@ -2,18 +2,39 @@
 <th:block th:fragment="template">
     <!--/*@thymesVar id="currentSession" type="easy.soc.hacks.frontend.domain.Session"*/-->
 
-    <canvas id="mapCanvas">
+    <div id="mapBlock">
+        <div id="mapPreview">
+            <canvas id="mapCanvas"></canvas>
+        </div>
+        <th:block th:include=":: mapControls"></th:block>
+    </div>
 
-    </canvas>
     <th:block th:include=":: collectAndShowMapScript"></th:block>
+</th:block>
+
+<th:block th:fragment="mapControls">
+    <div id="mapControlsSize">
+        <button id="mapControlsSizeButtonPlus" class="mapControlSizeButton">
+            +
+        </button>
+        <div id="mapControlsSizeText">
+
+        </div>
+        <button id="mapControlsSizeButtonMinus" class="mapControlSizeButton">
+            -
+        </button>
+    </div>
 </th:block>
 
 <th:block th:fragment="collectAndShowMapScript">
     <script th:inline="javascript">
-        const xMin = -10
-        const xMax = 10
-        const yMin = -5
-        const yMax = 5
+        let xMin = -10
+        let xMax = 10
+        let yMin = -5
+        let yMax = 5
+
+        let strideSize = 0.1
+        let strideMovement = 0.1
 
         let nextBatchId = undefined
 
@@ -26,6 +47,98 @@
         canvas.height = 300
 
         const context = canvas.getContext("2d")
+
+        function updateSize() {
+            document.getElementById("mapControlsSizeText").innerText =
+                "X: [" + xMin.toFixed(2) + ", " + xMax.toFixed(2) + "] Y: [" + yMin.toFixed(2) + ", " + yMax.toFixed(2) + "]"
+        }
+
+        updateSize()
+
+        const sizeButtonPlus = document.getElementById("mapControlsSizeButtonPlus")
+        const sizeButtonMinus = document.getElementById("mapControlsSizeButtonMinus")
+
+        let holdSizeButtonInterval = null
+
+        sizeButtonPlus.onmousedown = () => {
+            function changeSize() {
+                xMin += strideSize
+                xMax -= strideSize
+
+                yMin += strideSize * canvas.height / canvas.width
+                yMax -= strideSize * canvas.height / canvas.width
+
+                updateSize()
+            }
+
+            changeSize()
+
+            holdSizeButtonInterval = setInterval(
+                changeSize,
+                100
+            )
+        }
+        sizeButtonPlus.onmouseup = () => {
+            clearTimeout(holdSizeButtonInterval)
+            holdSizeButtonInterval = null
+        }
+        sizeButtonPlus.onmouseleave = () => {
+            clearTimeout(holdSizeButtonInterval)
+            holdSizeButtonInterval = null
+        }
+
+        sizeButtonMinus.onmousedown = () => {
+            function changeSize() {
+                xMin -= strideSize
+                xMax += strideSize
+
+                yMin -= strideSize * canvas.height / canvas.width
+                yMax += strideSize * canvas.height / canvas.width
+
+                updateSize()
+            }
+
+            changeSize()
+
+            holdSizeButtonInterval = setInterval(
+                changeSize,
+                100
+            )
+        }
+        sizeButtonMinus.onmouseup = () => {
+            clearTimeout(holdSizeButtonInterval)
+            holdSizeButtonInterval = null
+        }
+        sizeButtonMinus.onmouseleave = () => {
+            clearTimeout(holdSizeButtonInterval)
+            holdSizeButtonInterval = null
+        }
+
+        let canvasMoveEventActive = false
+
+        canvas.onmousedown = () => {
+            canvasMoveEventActive = true
+        }
+        canvas.onmouseup = () => {
+            canvasMoveEventActive = false
+        }
+        canvas.onmouseleave = () => {
+            canvasMoveEventActive = false
+        }
+        canvas.onmousemove = (event) => {
+            if (canvasMoveEventActive) {
+                const xMove = event.movementX * strideMovement
+                const yMove = event.movementY * strideMovement
+
+                xMin += xMove
+                xMax += xMove
+
+                yMin += yMove
+                yMax += yMove
+
+                updateSize()
+            }
+        }
 
         function clearCanvas() {
             context.clearRect(0, 0, canvas.width, canvas.height)

@@ -35,7 +35,7 @@
                 <th:block th:include="videoPreview :: template"></th:block>
 
                 <th:block th:if=" ${currentSession.status.toString() == 'STREAMING'}">
-                    <div id="mapPreview" th:include="mapPreview :: template"></div>
+                    <th:block th:include="mapPreview :: template"></th:block>
                 </th:block>
 
                 <div id="previewControls">
