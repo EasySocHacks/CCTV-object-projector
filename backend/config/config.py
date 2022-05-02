@@ -11,8 +11,6 @@ class Config:
 
         self.secure = False
 
-        self.token = None
-
         self.api_version = "1"
 
         self.stride_between_detection = 10
