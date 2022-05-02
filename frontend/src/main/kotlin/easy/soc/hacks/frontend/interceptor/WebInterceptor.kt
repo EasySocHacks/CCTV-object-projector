@@ -20,17 +20,6 @@ class WebInterceptor : HandlerInterceptor {
     override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
         val user = request.session.getAttribute("user")
 
-
-//        if (user == null && handler !is ResourceHttpRequestHandler && request.requestURI != "/login") {
-//            response.sendRedirect("/login")
-//            return false
-//        }
-//
-//        if (user != null && request.requestURI == "/login") {
-//            response.sendRedirect("/")
-//            return false
-//        }
-
         if (response.status == NOT_FOUND.value()) {
             response.sendRedirect("/404")
             return false
