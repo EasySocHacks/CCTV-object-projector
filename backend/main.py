@@ -170,12 +170,44 @@ def main():
         help="set projection radius for detected persons"
     )
     argument_parser.add_argument(
+        "--person_mean_height",
+        metavar="height",
+        type=float,
+        default=config.person_mean_height,
+        required=False,
+        help="set mean person height"
+    )
+    argument_parser.add_argument(
+        "--person_mean_velocity",
+        metavar="velocity",
+        type=float,
+        default=config.person_mean_velocity_in_dist_per_sec,
+        required=False,
+        help="set mean person velocity in specified distance per second"
+    )
+    argument_parser.add_argument(
         "--car_radius",
         metavar="radius",
         type=float,
         default=config.car_radius,
         required=False,
         help="set projection radius for detected cars"
+    )
+    argument_parser.add_argument(
+        "--car_mean_height",
+        metavar="height",
+        type=float,
+        default=config.car_mean_height,
+        required=False,
+        help="set mean car height"
+    )
+    argument_parser.add_argument(
+        "--car_mean_velocity",
+        metavar="velocity",
+        type=float,
+        default=config.car_mean_velocity_in_dist_per_sec,
+        required=False,
+        help="set mean car velocity in specified distance per second"
     )
     argument_parser.add_argument(
         "--download",
@@ -227,7 +259,11 @@ def main():
         config.bbox_expander_type = None
     config.fps = args.fps
     config.person_radius = args.person_radius
+    config.person_mean_height = args.person_mean_height
+    config.person_mean_velocity_in_dist_per_sec = args.person_mean_velocity
     config.car_radius = args.car_radius
+    config.car_mean_height = args.car_mean_height
+    config.car_mean_velocity_in_dist_per_sec = args.car_mean_velocity
     config.save_file_video_dir = args.download
     config.video_processor_count = args.processes
     if args.logger_type == "INFO":
