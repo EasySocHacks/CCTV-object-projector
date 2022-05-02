@@ -70,13 +70,7 @@ class ProcessorLinker:
 
                 writer.release()
 
-                # TODO: change to subprocess
                 with tempfile.NamedTemporaryFile(suffix=".ts") as tmp_file_ts:
-                    # subprocess.call("ffmpeg -y -i {} -muxdelay 0 -output_ts_offset {} -vcodec copy {}".format(
-                    #     tmp_file_mp4.name,
-                    #     sequence_id,
-                    #     tmp_file_ts.name
-                    # ), shell=True)
                     ffmpeg \
                         .input(tmp_file_mp4.name) \
                         .output(tmp_file_ts.name, vcodec='libx264', acodec='aac', audio_bitrate='160K',
