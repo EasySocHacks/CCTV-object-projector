@@ -38,9 +38,9 @@ class Projector:
                 for x, y, _, cls, idx in frame_id_video_id_dict[frame_id][video_id]:
                     r = 0.0
                     if cls == ObjectClassType.PERSON.value:
-                        r = self.config.person_radius
+                        r = self.config.person_radius * 2.0
                     if cls == ObjectClassType.CAR.value:
-                        r = self.config.car_radius
+                        r = self.config.car_radius * 2.0
 
                     if cls not in self._previous_projections_dict:
                         self._previous_projections_dict[cls] = np.array([])
