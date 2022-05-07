@@ -19,6 +19,7 @@ class ProjectionService {
             radius = projection.radius,
             x = projection.x,
             y = projection.y,
+            opacity = projection.opacity,
             classType = projection.classType.name
         )
 
@@ -30,6 +31,7 @@ class ProjectionService {
             radius = projection.radius,
             x = projection.x,
             y = projection.y,
+            opacity = projection.opacity,
             classType = projection.classType
         )
     }

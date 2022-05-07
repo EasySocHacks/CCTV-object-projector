@@ -88,11 +88,7 @@ class VideoController {
 
                 model.addAttribute(
                     "videoList",
-                    videoService.findVideosBySessionId(session.id).map {
-                        it.apply {
-                            data = null
-                        }
-                    }
+                    videoService.findVideosBySessionId(session.id)
                 )
             } else {
                 messageService.sendMessage(

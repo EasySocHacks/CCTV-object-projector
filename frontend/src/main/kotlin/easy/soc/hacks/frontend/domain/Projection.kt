@@ -52,6 +52,9 @@ class Projection(
     @Column(name = "y", nullable = false)
     val y: Double,
 
+    @Column(name = "opacity", nullable = false)
+    val opacity: Double,
+
     @Column(name = "radius", nullable = false)
     val radius: Double,
 

@@ -13,8 +13,8 @@ interface ProjectionRepository : JpaRepository<Projection, Long> {
     @Query(
         """
             insert into projections
-            (point_id, batch_id, frame_id, session_id, radius, x, y, class_type)
-             values (:pointId, :batchId, :frameId, :sessionId, :radius, :x, :y, :classType)
+            (point_id, batch_id, frame_id, session_id, radius, x, y, opacity, class_type)
+             values (:pointId, :batchId, :frameId, :sessionId, :radius, :x, :y, :opacity, :classType)
              returning point_id
         """,
         nativeQuery = true
@@ -28,6 +28,7 @@ interface ProjectionRepository : JpaRepository<Projection, Long> {
         @Param("radius") radius: Double,
         @Param("x") x: Double,
         @Param("y") y: Double,
+        @Param("opacity") opacity: Double,
         @Param("classType") classType: String
     ): Long
 

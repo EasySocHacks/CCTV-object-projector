@@ -71,7 +71,4 @@ class Video(
     @Enumerated(EnumType.STRING)
     @Column(name = "streaming_type", nullable = false)
     val streamingType: StreamingType,
-
-    @Column(name = "data", nullable = true)
-    var data: ByteArray? = null
 )

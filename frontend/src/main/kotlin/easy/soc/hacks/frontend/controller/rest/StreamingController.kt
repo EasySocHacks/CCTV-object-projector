@@ -125,6 +125,7 @@ class StreamingController {
                             session = session,
                             x = pointJson.get("x").asDouble(),
                             y = pointJson.get("y").asDouble(),
+                            opacity = pointJson.get("opacity").asDouble(),
                             radius = pointJson.get("radius").asDouble(),
                             classType = ProjectionClassType.valueOf(pointJson.get("classType").textValue())
                         )

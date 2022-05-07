@@ -151,13 +151,14 @@
             )
         }
 
-        function drawPoint(x, y, radius) {
+        function drawPoint(x, y, radius, opacity) {
             if (isPointOnCanvas([x, y])) {
                 const canvasX = (x - xMin) / (xMax - xMin) * canvas.width
                 const canvasY = (y - yMin) / (yMax - yMin) * canvas.height
                 const canvasRadius = radius / (xMax - xMin) * canvas.width
 
                 context.beginPath()
+                context.fillStyle = "rgba(0, 0, 0," + opacity + ")";
                 context.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI)
                 context.fill()
             }
@@ -172,8 +173,9 @@
                 const x = point[0]
                 const y = point[1]
                 const radius = point[2]
+                const opacity = point[3]
 
-                drawPoint(x, y, radius)
+                drawPoint(x, y, radius, opacity)
             }
 
             resolve()
@@ -246,13 +248,14 @@
                             const frameId = projection["frameId"]
                             const x = projection["x"]
                             const y = projection["y"]
+                            const opacity = projection["opacity"]
                             const radius = projection["radius"]
 
                             if (batchIdFrameIdPointsDict[batchId][frameId] === undefined) {
                                 batchIdFrameIdPointsDict[batchId][frameId] = []
                             }
 
-                            batchIdFrameIdPointsDict[batchId][frameId].push([x, y, radius])
+                            batchIdFrameIdPointsDict[batchId][frameId].push([x, y, radius, opacity])
                         }
                     }
 
