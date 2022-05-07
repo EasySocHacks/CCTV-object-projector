@@ -343,6 +343,7 @@ docker-compose run --gpus=all backend --host localhost --port 4000 --detector yo
 {
   "command": "SET_CALIBRATION",
   "videoId": ... // ID видео,
+  "sessionId": ..., // ID сессии
   "calibrationPointList": [{
     "xScreen": ..., // Координата X на изображении
     "yScreen": ..., // Координата Y на изображении
@@ -356,6 +357,8 @@ docker-compose run --gpus=all backend --host localhost --port 4000 --detector yo
 ```
 Определяет точки калибрации камры с ID `videoId`. 
 <br>
+`sessionId` у данный команды и команды `START_SESSION` должны совпадать.
+<br>
 Данная команда должна приходить после того, как видео с ID `videoId` было
 добавлено командой `APPEND_VIDEO`.
 
@@ -363,10 +366,13 @@ docker-compose run --gpus=all backend --host localhost --port 4000 --detector yo
 
 ```shell
 {
-  "command": "START_STREAMING"
+  "command": "START_STREAMING",
+  "sessionId": ... // ID сессии
 }
 ```
 Запускает обработку видео файлов, полученый в командах `APPEND_VIDEO`.
+<br>
+`sessionId` у данный команды и команды `START_SESSION` должны совпадать.
 
 #### STOP_SESSION
 
