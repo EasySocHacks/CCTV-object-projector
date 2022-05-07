@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import time
 from threading import Event, Thread
 
 import numpy as np
@@ -58,16 +59,23 @@ class MessageBroker:
     def _download_video(self, video_id, path):
         self._logger.info("Start downloading video with id '{}'".format(video_id))
 
-        method = "http"
-        if self.config.secure:
-            method = "https"
-        response = requests.get("{}://{}:{}/api/v{}/{}".format(
-            method,
-            self.config.host,
-            self.config.port,
-            self.config.api_version,
-            path
-        ))
+        while True:
+            method = "http"
+            if self.config.secure:
+                method = "https"
+            response = requests.get("{}://{}:{}/api/v{}/{}".format(
+                method,
+                self.config.host,
+                self.config.port,
+                self.config.api_version,
+                path
+            ))
+
+            if response.status_code != 200:
+                self._logger.debug("Failed to download video with id {}. Retry".format(video_id))
+                time.sleep(1)
+            else:
+                break
 
         video_dir_path = "{}/{}".format(
             os.path.dirname(os.path.abspath(__file__)),

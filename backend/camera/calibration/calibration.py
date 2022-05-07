@@ -118,16 +118,21 @@ class Calibration:
             raise Exception
         elif M.shape[1] == 1:
             divide_array = v / M[1:, :].astype(np.float64).flatten()
-            print(divide_array)
+
             if divide_array[0] == divide_array[1]:
                 return divide_array[0]
             else:
                 print("Cannot solve equation system (various solutions)")
                 raise Exception
         elif M.shape[1] == 2:
-            result[1, np.in1d(result[0, :], rest_coords)] = np.linalg.solve(M[1:, :].astype(np.float64), v)
+            idxs = np.in1d(result[0, :], rest_coords)
+            result = result[1, :].astype(np.float64)
+
+            M = M[1:, :].astype(np.float64)
+
+            result[idxs] = np.linalg.solve(M, v)
         else:
             print("Cannot solve equation with shape {}".format(M.shape[1]))
             raise Exception
 
-        return result[1:, :].astype(np.float64).reshape(3)
+        return result.reshape(3)
