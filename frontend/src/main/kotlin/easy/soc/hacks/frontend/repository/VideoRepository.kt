@@ -5,13 +5,16 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Repository
 import java.util.*
+import java.util.concurrent.Future
 import javax.transaction.Transactional
 
 
 @Repository
 interface VideoRepository : JpaRepository<Video, Long> {
+
     @Query(
         """
             select * from  videos
@@ -27,11 +30,12 @@ interface VideoRepository : JpaRepository<Video, Long> {
 
     fun findVideosBySessionId(sessionId: String): List<Video>
 
+    @Async
     @Query(
         """
             insert into videos
-            (session_id, name, streaming_type, uri, data)
-            values (:sessionId, :name, :streamingType, :uri, :data)
+            (session_id, name, streaming_type, uri)
+            values (:sessionId, :name, :streamingType, :uri)
             returning id
         """,
         nativeQuery = true
@@ -42,8 +46,7 @@ interface VideoRepository : JpaRepository<Video, Long> {
         @Param("name") name: String,
         @Param("streamingType") streamingType: String,
         @Param("uri") uri: String?,
-        @Param("data") data: ByteArray?
-    ): Long
+    ): Future<Long>
 
     @Query(
         """

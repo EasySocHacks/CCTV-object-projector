@@ -34,14 +34,21 @@
 
                     <th:block th:if="${param.get('type').toString()} == 'file'">
                         <label for="addVideoUri" th:text="#{video.add.form.uri}"></label>
-                        <input id="addVideoUri" type="file" name="file" accept="video/*">
+                        <input id="addVideoUri" type="file" multiple="multiple" name="file" accept="video/*">
                     </th:block>
                 </div>
-                <button type="submit" th:text="#{video.add.form.submit}"></button>
+                <button type="submit" th:text="#{video.add.form.submit}" onclick="onUpload()"></button>
             </form>
         </div>
     </th:block>
+    <div id="uploadingText" style="display: none" th:text="#{video.add.uploading}"></div>
 </th:block>
 <th:block th:include="message :: template"></th:block>
+
+<script>
+    function onUpload() {
+        document.getElementById("uploadingText").style.display = "block"
+    }
+</script>
 </body>
 </html>

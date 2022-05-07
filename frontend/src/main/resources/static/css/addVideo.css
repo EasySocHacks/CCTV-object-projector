@@ -21,3 +21,8 @@
     width: 100%;
     margin: 10px;
 }
+
+#uploadingText {
+    width: 100%;
+    text-align: center;
+}

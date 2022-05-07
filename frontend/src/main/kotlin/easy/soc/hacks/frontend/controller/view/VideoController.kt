@@ -8,6 +8,8 @@ import easy.soc.hacks.frontend.domain.MessageType.WARNING
 import easy.soc.hacks.frontend.domain.SessionStatusType.*
 import easy.soc.hacks.frontend.service.*
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.MediaType
+import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
@@ -134,7 +136,11 @@ class VideoController {
         return "addVideo"
     }
 
-    @PostMapping("video/add")
+    @Async
+    @PostMapping(
+        path = ["video/add"],
+        consumes = [MediaType.MULTIPART_FORM_DATA_VALUE]
+    )
     fun addVideo(
         @RequestParam("type") streamingType: StreamingType,
         @RequestParam("name") name: String,
@@ -168,12 +174,15 @@ class VideoController {
                     session = session,
                     name = name,
                     uri = uri,
-                    data = file?.bytes,
                     streamingType = streamingType
-                )
+                ),
+                file
             )
 
-            backendBrokerService.appendVideo(activeBackendWebSocketSession, savedVideo)
+            backendBrokerService.appendVideo(
+                activeBackendWebSocketSession,
+                savedVideo
+            )
         }
 
         return "redirect:/video/preview?type=${streamingType.value}"

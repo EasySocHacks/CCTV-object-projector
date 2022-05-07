@@ -34,5 +34,5 @@ class BackendWebSocketHandlerComponent : WebSocketHandler {
         }
     }
 
-    override fun supportsPartialMessages(): Boolean = false
+    override fun supportsPartialMessages(): Boolean = true
 }

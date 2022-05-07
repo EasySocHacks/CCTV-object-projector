@@ -328,8 +328,22 @@ class StreamingController {
                 return ResponseEntity.status(BAD_REQUEST).build()
             }
 
+            val multipartInputStream = VideoService.getVideoIdInputStream(
+                VideoId(
+                    videoId,
+                    sessionId
+                )
+            ) ?: return ResponseEntity.status(PROCESSING).build()
+
+            VideoService.deleteVideoIdInputStream(
+                VideoId(
+                    videoId,
+                    sessionId
+                )
+            )
+
             return ResponseEntity.ok().body(
-                video.data
+                multipartInputStream.readBytes()
             )
         } catch (e: NoSuchElementException) {
             return ResponseEntity.status(NOT_FOUND).build()

@@ -17,7 +17,27 @@ data class VideoId(
     val id: Long? = null,
 
     val sessionId: String? = null
-) : java.io.Serializable
+
+
+) : java.io.Serializable {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as VideoId
+
+        if (id != other.id) return false
+        if (sessionId != other.sessionId) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = id?.hashCode() ?: 0
+        result = 31 * result + (sessionId?.hashCode() ?: 0)
+        return result
+    }
+}
 
 @Table(name = "videos")
 @Entity
