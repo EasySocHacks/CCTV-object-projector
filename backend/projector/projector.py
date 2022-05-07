@@ -13,15 +13,26 @@ class Projector:
     def _frame_projections_to_points_json(projections, radius, class_type):
         points = []
 
-        for x, y in projections:
+        for x, y, opacity in projections:
             points.append({
                 "x": x,
                 "y": y,
+                "opacity": opacity,
                 "radius": radius,
                 "classType": class_type
             })
 
         return points
+
+    def _decay_projections(self, cls):
+        self._previous_projections_dict[cls][:, 2] -= \
+            1.0 / self.config.decay_point_time_sec / self.config.fps
+
+        self._previous_projections_dict[cls] = np.delete(
+            self._previous_projections_dict[cls],
+            np.argwhere(self._previous_projections_dict[cls][:, 2] <= 0).flatten(),
+            axis=0
+        )
 
     def get_next_projection_batch(self, frame_id_video_id_dict):
         result = []
@@ -64,7 +75,12 @@ class Projector:
                 projection_cnt = projections_dict[cls]["projection_cnt"]
                 radius = projections_dict[cls]["radius"]
 
+                if projection_cnt == 0:
+                    break
+
                 video_id_array = projections[:, 4]
+
+                point_array = projections[:, :2]
 
                 dist_matrix = np.linalg.norm(
                     np.repeat([projections[:, :2]], projection_cnt, axis=0).reshape((projection_cnt ** 2, 2)) -
@@ -79,55 +95,43 @@ class Projector:
 
                 dist_matrix[same_video_id_matrix] = np.inf
 
-                correlations_arg = np.argwhere(dist_matrix <= radius)
-                correlations = dist_matrix[correlations_arg[:, 0], correlations_arg[:, 1]]
+                while True:
+                    min_dist = np.min(dist_matrix)
 
-                if correlations.shape[0] == 0:
-                    projections_dict[cls] = {
-                        "projections": projections[:, :2],
-                        "projection_cnt": projection_cnt,
-                        "radius": radius
-                    }
+                    if min_dist > radius:
+                        break
 
-                    continue
+                    min_pos = np.argmin(dist_matrix)
+                    min_i = np.floor(min_pos / dist_matrix.shape[0]).astype(np.int64)
+                    min_j = (min_pos % dist_matrix.shape[1]).astype(np.int64)
 
-                correlations = np.vstack([
-                    correlations,
-                    correlations_arg[:, 0],
-                    correlations_arg[:, 1],
-                    np.vstack([
-                        correlations_arg[:, 0],
-                        video_id_array[correlations_arg[:, 1]]
-                    ]).T
-                ])
-                correlations = correlations[:, np.argsort(correlations[0, :])]
-                correlations = correlations[:, np.unique(correlations[3, :].astype(np.float64))]
-                correlations = correlations[1:-1, :].astype(np.float64)
+                    mean_point = np.mean([point_array[min_j], point_array[min_i]], axis=0)
+                    point_array = np.append(point_array, [mean_point], axis=0)
 
-                correlation_matrix = np.full((projection_cnt, projection_cnt), False)
-                correlation_matrix[correlations.T] = True
+                    dist_matrix = np.append(dist_matrix, [[0] * dist_matrix.shape[1]], axis=0)
+                    dist_matrix = np.append(dist_matrix.T, [[0] * dist_matrix.T.shape[1]], axis=0).T
 
-                correlation_array = np.full(projection_cnt, -1)
-                new_projections = np.array([])
+                    new_dist_array = np.linalg.norm(point_array - mean_point, axis=1)
+                    new_dist_array[np.argwhere(dist_matrix[min_i, :] == np.inf).flatten()] = np.inf
+                    new_dist_array[np.argwhere(dist_matrix[min_j, :] == np.inf).flatten()] = np.inf
 
-                for idx in range(projection_cnt):
-                    if correlation_array[idx] == -1:
-                        new_projections = np.append(new_projections, projections[idx]).reshape((-1, 2))
-                        correlation_array[idx] = new_projections.shape[0] - 1
+                    dist_matrix[-1, :] = new_dist_array
+                    dist_matrix[:, -1] = new_dist_array
 
-                    correlation_j_array = np.arange(0, projection_cnt)[correlation_matrix[idx, :]]
+                    dist_matrix = np.delete(dist_matrix, np.min([min_i, min_j]), axis=0)
+                    dist_matrix = np.delete(dist_matrix, np.max([min_i, min_j]), axis=0)
 
-                    for j in correlation_j_array:
-                        if correlation_array[j] == -1:
-                            new_projections[correlation_array[idx]] = np.mean([
-                                new_projections[correlation_array[idx]],
-                                projections[j]
-                            ], axis=0)
-                            correlation_array[j] = correlation_array[idx]
+                    dist_matrix = np.delete(dist_matrix, np.min([min_i, min_j]), axis=1)
+                    dist_matrix = np.delete(dist_matrix, np.max([min_i, min_j]), axis=1)
+
+                    point_array = np.delete(point_array, np.max([min_i, min_j]), axis=0)
+                    point_array = np.delete(point_array, np.min([min_i, min_j]), axis=0)
+
+                point_array = np.vstack([point_array.T, [[1] * point_array.shape[0]]]).T
 
                 projections_dict[cls] = {
-                    "projections": new_projections,
-                    "projection_cnt": new_projections.shape[0],
+                    "projections": point_array,
+                    "projection_cnt": point_array.shape[0],
                     "radius": radius
                 }
 
@@ -161,16 +165,21 @@ class Projector:
                         mean_distance_per_frame = self.config.car_mean_distance_per_frame()
 
                     dist_matrix = np.linalg.norm(
-                        np.repeat([previous_projections], projection_cnt, axis=0).reshape(
+                        np.repeat([previous_projections[:, :-1]], projection_cnt, axis=0).reshape(
                             (previous_projection_cnt * projection_cnt, 2)) -
-                        np.repeat(projections, previous_projection_cnt, axis=0),
+                        np.repeat(projections[:, :-1], previous_projection_cnt, axis=0),
                         axis=1
                     ).reshape((projection_cnt, previous_projection_cnt))
 
                     where_correlation_arg = np.argwhere(dist_matrix <= mean_distance_per_frame)
 
                     if where_correlation_arg.shape[0] == 0:
-                        self._previous_projections_dict[cls] = projections
+                        self._decay_projections(cls)
+
+                        self._previous_projections_dict[cls] = np.vstack([
+                            self._previous_projections_dict[cls],
+                            projections
+                        ])
 
                         result[-1]["points"].extend(self._frame_projections_to_points_json(
                             projections,
@@ -182,7 +191,8 @@ class Projector:
 
                     correlations = np.vstack([
                         dist_matrix[where_correlation_arg[:, 0], where_correlation_arg[:, 1]],
-                        where_correlation_arg.T
+                        where_correlation_arg[:, 0],
+                        where_correlation_arg[:, 1]
                     ])
 
                     correlations = correlations[:, np.argsort(correlations[0, :])]
@@ -197,13 +207,28 @@ class Projector:
 
                         correlation_matrix[i, j] = True
 
-                    projections_correlations = np.stack([projections, projections], axis=1)
+                    self._previous_projections_dict[cls] = np.delete(
+                        self._previous_projections_dict[cls],
+                        np.any(correlation_matrix, axis=0),
+                        axis=0
+                    )
+
+                    self._decay_projections(cls)
+
+                    projections_correlations = np.stack([projections[:, :-1], projections[:, :-1]], axis=1)
                     where_correlation_arg = np.argwhere(correlation_matrix)
                     projections_correlations[where_correlation_arg[:, 0], 1, :] = \
-                        previous_projections[where_correlation_arg[:, 1], :]
+                        previous_projections[where_correlation_arg[:, 1], :-1]
 
                     new_projections = np.mean(projections_correlations, axis=1)
-                    self._previous_projections_dict[cls] = new_projections
+                    new_projections = np.vstack([
+                        new_projections.T,
+                        [1] * new_projections.shape[0]
+                    ]).T
+                    self._previous_projections_dict[cls] = np.vstack([
+                        self._previous_projections_dict[cls],
+                        new_projections
+                    ])
 
                     result[-1]["points"].extend(
                         self._frame_projections_to_points_json(new_projections, radius, class_type)

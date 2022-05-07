@@ -210,6 +210,14 @@ def main():
         help="set mean car velocity in specified distance per second"
     )
     argument_parser.add_argument(
+        "--decay_point_time",
+        metavar="sec",
+        type=float,
+        default=config.decay_point_time_sec,
+        required=False,
+        help="set time to complete forget about previous point"
+    )
+    argument_parser.add_argument(
         "--download",
         metavar="path",
         type=str,
@@ -254,7 +262,7 @@ def main():
     config.detector_threshold = args.detector_threshold
     config.bbox_expander_weight_path = args.bbox_expander_weights
     if args.bbox_expander is not None:
-        config.bbox_expander_type = BboxExpander.get_model(config.bbox_expander_weight_path)
+        config.bbox_expander_type = "expander"
     else:
         config.bbox_expander_type = None
     config.fps = args.fps
@@ -264,6 +272,7 @@ def main():
     config.car_radius = args.car_radius
     config.car_mean_height = args.car_mean_height
     config.car_mean_velocity_in_dist_per_sec = args.car_mean_velocity
+    config.decay_point_time_sec = args.decay_point_time
     config.save_file_video_dir = args.download
     config.video_processor_count = args.processes
     if args.logger_type == "INFO":

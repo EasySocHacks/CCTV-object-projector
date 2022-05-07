@@ -43,7 +43,7 @@ class VideoProcessor:
         if self.config.bbox_expander_type is None:
             self._bbox_expander = None
         else:
-            self._bbox_expander = self.config.bbox_expander_type(device)
+            self._bbox_expander = BboxExpander(device, self.config.bbox_expander_weight_path)
 
         self._logger = get_logger()
 
@@ -164,7 +164,7 @@ class VideoProcessor:
                             np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[1]]),
                             Z = mean_height
                         )
-                        p3 = np.array(p2[0], p2[1], 0)
+                        p3 = np.array([p2[0], p2[1], 0])
                         projection = p1 + (p3 - p1) / 2.0
                         projection_class_idx_array = np.append(
                             projection_class_idx_array,
@@ -205,7 +205,7 @@ class VideoProcessor:
                             np.array([(final_bbox[2] + final_bbox[0]) / 2.0, final_bbox[1]]),
                             Z=mean_height
                         )
-                        p3 = np.array(p2[0], p2[1], 0)
+                        p3 = np.array([p2[0], p2[1], 0])
                         projection = p1 + (p3 - p1) / 2.0
                         projection_class_idx_array = np.append(
                             projection_class_idx_array,

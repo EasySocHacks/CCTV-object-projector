@@ -42,7 +42,3 @@ class BboxExpander:
         ny = expand[3] * (nh / 2.0) + y
 
         return [nx - nw / 2.0, ny - nh / 2.0, nx + nw / 2.0, ny + nh / 2.0]
-
-    @staticmethod
-    def get_model(model_weight_path):
-        return lambda device: BboxExpander(device, model_weight_path)

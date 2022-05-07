@@ -43,6 +43,8 @@ class Config:
 
         self.car_mean_velocity_in_dist_per_sec = 1.8
 
+        self.decay_point_time_sec = 2
+
         self.save_file_video_dir = "data/video"
 
         self.video_processor_count = 1
