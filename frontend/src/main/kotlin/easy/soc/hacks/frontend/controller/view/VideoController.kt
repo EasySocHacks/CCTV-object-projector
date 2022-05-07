@@ -313,7 +313,10 @@ class VideoController {
             return "redirect:/video/preview?type=${session.streamingType.value}"
         }
 
-        backendBrokerService.startStreaming(activeBackendWebSocketSession)
+        backendBrokerService.startStreaming(
+            activeBackendWebSocketSession,
+            session
+        )
 
         sessionService.save(
             Session(

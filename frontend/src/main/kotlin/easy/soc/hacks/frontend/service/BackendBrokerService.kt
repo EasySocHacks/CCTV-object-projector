@@ -87,6 +87,7 @@ class BackendBrokerService {
 
         command.put("command", SET_CALIBRATION.command)
         command.put("videoId", video.id)
+        command.put("sessionId", video.session.id)
 
         val calibrationPointJsonArray = objectMapper.createArrayNode()
 
@@ -112,11 +113,13 @@ class BackendBrokerService {
 
     fun startStreaming(
         webSocketSession: WebSocketSession?,
+        session: Session
     ) {
         val objectMapper = ObjectMapper()
         val command = objectMapper.createObjectNode()
 
         command.put("command", START_STREAMING.command)
+        command.put("sessionId", session.id)
 
         webSocketSession?.sendMessage(
             TextMessage(
