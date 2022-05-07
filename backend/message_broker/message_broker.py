@@ -114,7 +114,10 @@ class MessageBroker:
         if command == "START_SESSION":
             session_id = response["sessionId"]
 
-            self._main_loop.session_id = session_id
+            if self._main_loop.session_id is None:
+                self._main_loop.session_id = session_id
+            else:
+                self._logger.warning("Incorrect command START_SESSION: session is already set")
         elif command == "STOP_SESSION":
             session_id = response["sessionId"]
 
@@ -123,61 +126,76 @@ class MessageBroker:
 
                 del self._main_loop
                 self._main_loop = MainLoop(self.config)
+            else:
+                self._logger.warning("Incorrect session for command STOP_SESSION")
         elif command == "APPEND_VIDEO":
             video_id = response["videoId"]
+            session_id = response["sessionId"]
             uri = response["uri"]
             streaming_type = response["streamingType"]
 
-            self._logger.info("Appending video with uri '{}'".format(uri))
+            if self._main_loop.session_id == session_id:
+                self._logger.info("Appending video with uri '{}'".format(uri))
 
-            if streaming_type == "file":
-                self._video_download_processes.append(Thread(
-                    target=self._download_video,
-                    args=(video_id, uri,)
-                ))
+                if streaming_type == "file":
+                    self._video_download_processes.append(Thread(
+                        target=self._download_video,
+                        args=(video_id, uri,)
+                    ))
 
-                self._video_download_processes[-1].start()
-            else:
-                self._main_loop.append_video(
-                    Video(
-                        video_id,
-                        self._main_loop.session_id,
-                        uri,
-                        streaming_type,
-                        Camera()
+                    self._video_download_processes[-1].start()
+                else:
+                    self._main_loop.append_video(
+                        Video(
+                            video_id,
+                            self._main_loop.session_id,
+                            uri,
+                            streaming_type,
+                            Camera()
+                        )
                     )
-                )
+            else:
+                self._logger.warning("Incorrect session for command APPEND_VIDEO")
         elif command == "START_STREAMING":
-            for video_download_process in self._video_download_processes:
-                video_download_process.join()
+            session_id = response["sessionId"]
 
-            self._main_loop.start()
+            if self._main_loop.session_id == session_id:
+                for video_download_process in self._video_download_processes:
+                    video_download_process.join()
+
+                self._main_loop.start()
+            else:
+                self._logger.warning("Incorrect session for command START_STREAMING")
         elif command == "SET_CALIBRATION":
             video_id = response["videoId"]
+            session_id = response["sessionId"]
             points = response["calibrationPointList"]
 
-            screen_points = np.array([])
-            world_points = np.array([])
-            for point in points:
-                x_screen = point["xScreen"]
-                y_screen = point["yScreen"]
+            if self._main_loop.session_id == session_id:
+                screen_points = np.array([])
+                world_points = np.array([])
+                for point in points:
+                    x_screen = point["xScreen"]
+                    y_screen = point["yScreen"]
 
-                screen_points = np.append(screen_points, [x_screen, y_screen])
+                    screen_points = np.append(screen_points, [x_screen, y_screen])
 
-                x_word = point["xWorld"]
-                y_word = point["yWorld"]
-                z_word = point["zWorld"]
+                    x_word = point["xWorld"]
+                    y_word = point["yWorld"]
+                    z_word = point["zWorld"]
 
-                world_points = np.append(world_points, [x_word, y_word, z_word])
+                    world_points = np.append(world_points, [x_word, y_word, z_word])
 
-            screen_points = screen_points.reshape((6, 2))
-            world_points = world_points.reshape((6, 3))
+                screen_points = screen_points.reshape((6, 2))
+                world_points = world_points.reshape((6, 3))
 
-            calibration = Calibration(screen_points, world_points)
-            self._logger.debug("Calibration set to video with id '{}' with matrix\n{}".format(
-                video_id,
-                calibration.matrix
-            ))
-            self._main_loop.video_dict[video_id].camera.calibration = calibration
+                calibration = Calibration(screen_points, world_points)
+                self._logger.debug("Calibration set to video with id '{}' with matrix\n{}".format(
+                    video_id,
+                    calibration.matrix
+                ))
+                self._main_loop.video_dict[video_id].camera.calibration = calibration
+            else:
+                self._logger.warning("Incorrect session for command SET_CALIBRATION")
         else:
             self._logger.warning("Unknown command '{}', received from frontend".format(command))
