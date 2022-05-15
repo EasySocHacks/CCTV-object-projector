@@ -4,6 +4,7 @@
 
     <div id="mapBlock">
         <div id="mapPreview">
+            <div id="dropImageDiv" th:text="#{map.preview.drop.image}"></div>
             <canvas id="mapCanvas"></canvas>
         </div>
         <th:block th:include=":: mapControls"></th:block>
@@ -28,6 +29,8 @@
 
 <th:block th:fragment="collectAndShowMapScript">
     <script th:inline="javascript">
+        let canvasImage = new Image()
+
         let xMin = -10
         let xMax = 10
         let yMin = -5
@@ -59,6 +62,41 @@
         const sizeButtonMinus = document.getElementById("mapControlsSizeButtonMinus")
 
         let holdSizeButtonInterval = null
+
+        const mapPreview = document.getElementById("mapPreview")
+        const dropImageDiv = document.getElementById("dropImageDiv")
+
+        mapPreview.ondragover = (event) => {
+            event.preventDefault()
+
+            dropImageDiv.style.display = "block"
+        }
+
+        mapPreview.ondragleave = (event) => {
+            if (event.fromElement === document.getElementById("preview")) {
+                dropImageDiv.style.display = "none"
+            }
+        }
+
+        mapPreview.ondrop = (event) => {
+            event.preventDefault()
+
+            dropImageDiv.style.display = "none"
+
+            const files = event.dataTransfer.files
+
+            if (files.length === 1) {
+                const file = files[0]
+
+                if (file["type"].split("/")[0] === "image") {
+                    canvasImage.src = URL.createObjectURL(file)
+
+                    canvasImage.onload = () => {
+                        drawImage()
+                    }
+                }
+            }
+        }
 
         sizeButtonPlus.onmousedown = () => {
             function changeSize() {
@@ -151,6 +189,12 @@
             )
         }
 
+        function drawImage() {
+            if (canvasImage.src !== "") {
+                context.drawImage(canvasImage, 0, 0, canvas.width, canvas.height)
+            }
+        }
+
         function drawPoint(x, y, radius, opacity) {
             if (isPointOnCanvas([x, y])) {
                 const canvasX = (x - xMin) / (xMax - xMin) * canvas.width
@@ -166,6 +210,8 @@
 
         function drawFrame(resolve, batchId, frameId) {
             clearCanvas()
+
+            drawImage()
 
             for (let pointId in batchIdFrameIdPointsDict[batchId][frameId]) {
                 const point = batchIdFrameIdPointsDict[batchId][frameId][pointId]
